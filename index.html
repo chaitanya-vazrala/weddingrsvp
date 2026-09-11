@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chaitanya & Mounisha</title>
+
+<style>
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  font-family:Georgia,serif;
+  color:#55463f;
+  background:#f8f1e7;
+}
+body.lock{overflow:hidden}
+
+/* ENVELOPE SCREEN */
+.hero{
+  min-height:100svh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:
+    radial-gradient(circle at 20% 15%,#fff9,transparent 25%),
+    linear-gradient(145deg,#e4d2b8,#f8efe1,#dbc2a4);
+}
+
+.envelope-wrap{
+  width:min(88vw,430px);
+  height:300px;
+  position:relative;
+  perspective:1200px;
+  filter:drop-shadow(0 25px 25px #59402c35);
+}
+
+.envelope{
+  position:absolute;
+  inset:0;
+  background:#f6ead6;
+  border-radius:7px;
+}
+
+/* invitation inside envelope */
+.card{
+  position:absolute;
+  z-index:2;
+  left:6%;
+  width:88%;
+  height:570px;
+  bottom:10px;
+  background:#fffaf2;
+  border-radius:6px;
+  transform:translateY(50%);
+  transition:transform 1.4s .5s cubic-bezier(.16,.8,.2,1);
+  box-shadow:0 10px 25px #65452f30;
+  overflow:hidden;
+}
+
+.open .card{
+  transform:translateY(-42%);
+}
+
+/* envelope front */
+.front{
+  position:absolute;
+  inset:0;
+  z-index:5;
+  clip-path:polygon(0 35%,50% 73%,100% 35%,100% 100%,0 100%);
+  background:linear-gradient(145deg,#f9edda,#e8d0ae);
+}
+
+/* flap */
+.flap{
+  position:absolute;
+  left:0;
+  right:0;
+  top:0;
+  height:63%;
+  z-index:7;
+  transform-origin:top;
+  transition:transform 1.2s;
+  clip-path:polygon(0 0,100% 0,50% 100%);
+  background:linear-gradient(#f5e6cf,#ddbd92);
+}
+
+.open .flap{
+  transform:rotateX(180deg);
+  z-index:1;
+}
+
+/* WAX SEAL */
+.seal{
+  position:absolute;
+  z-index:10;
+  left:50%;
+  top:43%;
+  transform:translate(-50%,-50%);
+  width:86px;
+  height:86px;
+  border:0;
+  border-radius:50%;
+  cursor:pointer;
+  color:#f4d9aa;
+  font:700 22px Georgia;
+  letter-spacing:2px;
+  background:
+    radial-gradient(circle at 35% 30%,
+    #b95d62,#7c3035 58%,#552025);
+  box-shadow:
+    0 4px 0 #491d20,
+    0 8px 16px #50352b55,
+    inset 0 0 0 5px #dda17d70;
+}
+
+.seal:after{
+  content:"";
+  position:absolute;
+  inset:10px;
+  border:1px solid #e4b68b;
+  border-radius:50%;
+}
+
+.open .seal{
+  animation:sealAway .7s forwards;
+}
+
+@keyframes sealAway{
+  to{
+    opacity:0;
+    transform:translate(-50%,-50%) scale(.3) rotate(20deg);
+  }
+}
+
+.tap{
+  position:absolute;
+  z-index:11;
+  top:76%;
+  width:100%;
+  text-align:center;
+  font:12px Arial;
+  letter-spacing:2px;
+}
+
+.open .tap{display:none}
+
+/* CARD PREVIEW */
+.preview{
+  height:100%;
+  text-align:center;
+  padding:30px 22px;
+  background:
+    radial-gradient(circle at 10% 10%,#edb8bd55 0 6%,transparent 7%),
+    radial-gradient(circle at 90% 15%,#b9c8ad55 0 7%,transparent 8%),
+    linear-gradient(#fffaf2,#fbf3e7);
+}
+
+.kicker{
+  font-size:10px;
+  letter-spacing:4px;
+}
+
+.names{
+  font-family:"Brush Script MT","Snell Roundhand",cursive;
+  font-size:43px;
+  color:#984f55;
+  margin:12px 0 2px;
+}
+
+.subtitle{
+  font-size:10px;
+  letter-spacing:3px;
+}
+
+/* PAINTBRUSH REVEAL */
+.paint-stage{
+  height:200px;
+  position:relative;
+  overflow:hidden;
+  margin:15px 0;
+  border-radius:100px 100px 35px 35px;
+}
+
+.painting{
+  position:absolute;
+  inset:0;
+
+  clip-path:inset(0 100% 0 0);
+  transition:clip-path 3.2s .3s ease-in-out;
+
+  background:
+    radial-gradient(circle at 50% 55%,#e3bfa5 0 14%,transparent 15%),
+    radial-gradient(circle at 40% 43%,#40312b 0 13%,transparent 14%),
+    radial-gradient(circle at 60% 48%,#604238 0 13%,transparent 14%),
+    radial-gradient(circle at 50% 70%,#ead4c0 0 25%,transparent 26%),
+
+    radial-gradient(circle at 17% 45%,#e6afb8 0 9%,transparent 10%),
+    radial-gradient(circle at 82% 45%,#dbaab3 0 9%,transparent 10%),
+
+    radial-gradient(circle at 27% 74%,#9fab91 0 8%,transparent 9%),
+    radial-gradient(circle at 74% 72%,#9fab91 0 9%,transparent 10%);
+}
+
+.painting:after{
+  content:"C  ♡  M";
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font:32px "Brush Script MT",cursive;
+  color:#fff9;
+}
+
+.open .painting{
+  clip-path:inset(0 0 0 0);
+}
+
+/* animated brush */
+.brush{
+  position:absolute;
+  z-index:5;
+  width:140px;
+  height:23px;
+  top:70px;
+  left:-100px;
+  opacity:0;
+  border-radius:15px;
+
+  background:
+    linear-gradient(90deg,
+    #c39861 0 65%,
+    #c9c9c9 66% 82%,
+    #865738 83%);
+
+  transform:rotate(8deg);
+}
+
+.open .brush{
+  animation:paintingBrush 3.2s .7s ease-in-out forwards;
+}
+
+@keyframes paintingBrush{
+  0%{
+    left:-100px;
+    top:70px;
+    opacity:1;
+  }
+  35%{top:42px}
+  68%{top:108px}
+  100%{
+    left:105%;
+    top:70px;
+    opacity:1;
+  }
+}
+
+/* MAIN INVITATION */
+.invitation{
+  padding:65px 20px;
+  text-align:center;
+  background:#fffaf3;
+}
+
+.invitation h1{
+  margin:5px 0 12px;
+  font:48px "Brush Script MT",cursive;
+  color:#984f55;
+}
+
+.intro{
+  font-size:13px;
+  letter-spacing:2px;
+  margin-bottom:35px;
+}
+
+.events{
+  max-width:750px;
+  margin:auto;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:15px;
+}
+
+.event{
+  padding:28px 15px;
+  border:1px solid #d5bfa1;
+  border-radius:18px;
+  background:#fffdf9;
+  box-shadow:0 10px 25px #6c4a3215;
+}
+
+.date{
+  color:#ae8551;
+  font-size:13px;
+  letter-spacing:3px;
+}
+
+.event-name{
+  font-size:25px;
+  color:#79484d;
+  margin:10px 0;
+}
+
+.event-text{
+  font-size:12px;
+  line-height:1.7;
+}
+
+.venue{
+  max-width:600px;
+  margin:45px auto;
+  padding:30px 10px;
+  border-top:1px solid #d5bfa1;
+  border-bottom:1px solid #d5bfa1;
+}
+
+.venue h2{
+  letter-spacing:5px;
+  font-size:23px;
+}
+
+.location,
+.rsvp-button{
+  display:inline-block;
+  margin:10px 4px;
+  padding:12px 19px;
+  border-radius:30px;
+  border:1px solid #a97060;
+  color:#784b45;
+  text-decoration:none;
+  font:11px Arial;
+  letter-spacing:1px;
+  background:white;
+}
+
+/* RSVP */
+.rsvp{
+  max-width:600px;
+  margin:40px auto 0;
+  padding:28px;
+  background:#f5ebdd;
+  border-radius:22px;
+  text-align:left;
+}
+
+.rsvp h2{
+  text-align:center;
+  font-size:30px;
+  color:#984f55;
+}
+
+label{
+  display:block;
+  margin:15px 0 6px;
+  font-size:13px;
+}
+
+input,
+select,
+textarea{
+  width:100%;
+  padding:13px;
+  border:1px solid #d1b99b;
+  border-radius:12px;
+  background:white;
+  font-size:15px;
+}
+
+textarea{
+  min-height:90px;
+}
+
+.checks label{
+  font-family:Arial;
+  margin:9px 0;
+}
+
+.checks input{
+  width:auto;
+}
+
+.submit{
+  width:100%;
+  margin-top:20px;
+  padding:14px;
+  border:0;
+  border-radius:30px;
+  background:#8c4b50;
+  color:white;
+  font-weight:bold;
+  letter-spacing:1px;
+}
+
+.thanks{
+  display:none;
+  text-align:center;
+  padding:25px;
+  line-height:1.7;
+}
+
+.end{
+  margin-top:45px;
+  font-size:11px;
+  letter-spacing:3px;
+}
+
+@media(max-width:650px){
+  .events{
+    grid-template-columns:1fr;
+  }
+}
+
+@media(max-height:730px){
+  .envelope-wrap{
+    transform:scale(.82);
+  }
+}
+</style>
+</head>
+
+<body class="lock">
+
+<!-- ENVELOPE -->
+
+<section class="hero">
+
+<div class="envelope-wrap" id="envelope">
+
+<div class="envelope">
+
+<div class="card">
+
+<div class="preview">
+
+<div class="kicker">
+A LITTLE GLIMPSE OF OUR FOREVER
+</div>
+
+<div class="names">
+Chaitanya & Mounisha
+</div>
+
+<div class="subtitle">
+ARE GETTING MARRIED
+</div>
+
+<div class="paint-stage">
+
+<div class="painting"></div>
+
+<div class="brush"></div>
+
+</div>
+
+<div class="subtitle">
+THREE DAYS • ONE BEAUTIFUL BEGINNING
+</div>
+
+</div>
+
+</div>
+
+<div class="front"></div>
+
+<div class="flap"></div>
+
+<button class="seal" id="seal">
+C&M
+</button>
+
+<div class="tap">
+TAP THE SEAL TO OPEN
+</div>
+
+</div>
+</div>
+
+</section>
+
+
+<!-- INVITATION -->
+
+<section class="invitation" id="invite">
+
+<div class="kicker">
+WITH LOVE, JOY & BLESSINGS
+</div>
+
+<h1>
+Chaitanya & Mounisha
+</h1>
+
+<div class="intro">
+invite you to celebrate the beginning of their forever
+</div>
+
+
+<div class="events">
+
+<div class="event">
+
+<div class="date">
+OCT 23
+</div>
+
+<div class="event-name">
+Sangeeth
+</div>
+
+<div class="event-text">
+Music • Dance • Togetherness
+</div>
+
+</div>
+
+
+<div class="event">
+
+<div class="date">
+OCT 24
+</div>
+
+<div class="event-name">
+Haldi
+</div>
+
+<div class="event-text">
+A day filled with laughter,
+blessings & sunshine
+</div>
+
+</div>
+
+
+<div class="event">
+
+<div class="date">
+OCT 25
+</div>
+
+<div class="event-name">
+Wedding
+</div>
+
+<div class="event-text">
+Two souls • One beautiful journey
+</div>
+
+</div>
+
+</div>
+
+
+<div class="venue">
+
+<h2>
+JORDAN RANCH
+</h2>
+
+<p>TEXAS</p>
+
+<a
+class="location"
+href="#"
+onclick="alert('We will add your Jordan Ranch Google Maps link here.');return false;"
+>
+VIEW LOCATION
+</a>
+
+<a
+class="rsvp-button"
+href="#rsvp"
+>
+RSVP
+</a>
+
+</div>
+
+
+<!-- RSVP -->
+
+<div class="rsvp" id="rsvp">
+
+<h2>
+RSVP
+</h2>
+
+<form
+name="wedding-rsvp"
+method="POST"
+data-netlify="true"
+id="rsvpForm"
+>
+
+<input
+type="hidden"
+name="form-name"
+value="wedding-rsvp"
+>
+
+
+<label>
+Your Name
+</label>
+
+<input
+type="text"
+name="name"
+required
+placeholder="Full name"
+>
+
+
+<label>
+Will you be joining us?
+</label>
+
+<select name="attendance" required>
+
+<option value="">
+Please select
+</option>
+
+<option value="Yes">
+Joyfully accepting
+</option>
+
+<option value="No">
+Regretfully declining
+</option>
+
+</select>
+
+
+<label>
+Number of Guests
+</label>
+
+<input
+type="number"
+name="guests"
+min="1"
+max="10"
+value="1"
+>
+
+
+<label>
+Which events will you attend?
+</label>
+
+<div class="checks">
+
+<label>
+<input
+type="checkbox"
+name="sangeeth"
+value="yes">
+Sangeeth — October 23
+</label>
+
+<label>
+<input
+type="checkbox"
+name="haldi"
+value="yes">
+Haldi — October 24
+</label>
+
+<label>
+<input
+type="checkbox"
+name="wedding"
+value="yes">
+Wedding — October 25
+</label>
+
+</div>
+
+
+<label>
+Message for the Couple
+</label>
+
+<textarea
+name="message"
+placeholder="Leave us a little note..."
+></textarea>
+
+
+<button
+class="submit"
+type="submit"
+>
+SEND RSVP
+</button>
+
+</form>
+
+
+<div
+class="thanks"
+id="thanks"
+>
+
+Thank you! ♡
+
+<br><br>
+
+We can't wait to celebrate with you.
+
+</div>
+
+</div>
+
+
+<div class="end">
+WE CAN'T WAIT TO CELEBRATE WITH YOU
+</div>
+
+</section>
+
+
+<script>
+
+const envelope =
+document.getElementById("envelope");
+
+const seal =
+document.getElementById("seal");
+
+seal.addEventListener("click",function(){
+
+envelope.classList.add("open");
+
+document.body.classList.remove("lock");
+
+setTimeout(function(){
+
+document
+.getElementById("invite")
+.scrollIntoView({
+behavior:"smooth"
+});
+
+},4300);
+
+});
+
+
+const form =
+document.getElementById("rsvpForm");
+
+form.addEventListener("submit",function(e){
+
+e.preventDefault();
+
+const formData =
+new FormData(form);
+
+fetch("/",{
+
+method:"POST",
+
+headers:{
+"Content-Type":
+"application/x-www-form-urlencoded"
+},
+
+body:
+new URLSearchParams(formData).toString()
+
+})
+
+.then(function(){
+
+form.style.display="none";
+
+document
+.getElementById("thanks")
+.style.display="block";
+
+})
+
+.catch(function(){
+
+alert(
+"Please try submitting your RSVP again."
+);
+
+});
+
+});
+
+</script>
+
+</body>
+</html>
