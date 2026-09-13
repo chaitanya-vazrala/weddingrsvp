@@ -407,14 +407,72 @@ textarea{
 }
 
 @media(max-width:650px){
+  .hero{
+    min-height:90svh;
+    padding:20px 0;
+  }
+
+  .envelope-wrap{
+    width:min(92vw,390px);
+    height:260px;
+  }
+
+  .card{
+    height:470px;
+  }
+
   .events{
     grid-template-columns:1fr;
+  }
+
+  .invitation{
+    padding:52px 16px 32px;
+  }
+
+  .invitation h1{
+    font-size:42px;
+  }
+
+  .venue h2{
+    letter-spacing:3px;
+    font-size:20px;
+  }
+
+  .location,
+  .rsvp-button{
+    display:block;
+    width:100%;
+    text-align:center;
+    margin:10px 0;
+  }
+
+  .rsvp{
+    padding:22px 16px;
+  }
+
+  .rsvp h2{
+    font-size:26px;
+  }
+
+  label,
+  input,
+  select,
+  textarea,
+  .submit,
+  .thanks{
+    font-size:16px;
   }
 }
 
 @media(max-height:730px){
   .envelope-wrap{
     transform:scale(.82);
+  }
+}
+
+@media(min-width:651px) and (max-width:900px){
+  .events{
+    grid-template-columns:repeat(2,1fr);
   }
 }
 </style>
@@ -455,7 +513,7 @@ ARE GETTING MARRIED
 </div>
 
 <div class="subtitle">
-THREE DAYS • ONE BEAUTIFUL BEGINNING
+THREE BEAUTIFUL DAYS • ONE UNFORGETTABLE BEGINNING
 </div>
 
 </div>
@@ -493,7 +551,7 @@ Chaitanya & Mounisha
 </h1>
 
 <div class="intro">
-invite you to celebrate the beginning of their forever
+With love and joy, we invite you to celebrate the beginning of our forever.
 </div>
 
 
@@ -506,11 +564,11 @@ OCT 23
 </div>
 
 <div class="event-name">
-Sangeeth
+Sangeeth Celebration
 </div>
 
 <div class="event-text">
-Music • Dance • Togetherness
+Music • Dance • Joy • Togetherness
 </div>
 
 </div>
@@ -523,7 +581,7 @@ OCT 24
 </div>
 
 <div class="event-name">
-Haldi
+Haldi Ceremony
 </div>
 
 <div class="event-text">
@@ -541,11 +599,11 @@ OCT 25
 </div>
 
 <div class="event-name">
-Wedding
+Wedding Ceremony
 </div>
 
 <div class="event-text">
-Two souls • One beautiful journey
+Two hearts • One beautiful journey
 </div>
 
 </div>
@@ -563,10 +621,11 @@ JORDAN RANCH
 
 <a
 class="location"
-href="#"
-onclick="alert('We will add your Jordan Ranch Google Maps link here.');return false;"
+href="PASTE_YOUR_GOOGLE_MAPS_LINK_HERE"
+target="_blank"
+rel="noopener noreferrer"
 >
-VIEW LOCATION
+GET DIRECTIONS
 </a>
 
 <a
@@ -584,13 +643,16 @@ RSVP
 <div class="rsvp" id="rsvp">
 
 <h2>
-RSVP
+Kindly RSVP
 </h2>
+
+<p style="text-align:center; margin:8px 0 18px; font-size:14px; letter-spacing:0.8px; color:#6c5348;">
+We would be honored to celebrate with you. Kindly share your response.
+</p>
 
 <form
 name="wedding-rsvp"
 method="POST"
-data-netlify="true"
 id="rsvpForm"
 >
 
@@ -709,7 +771,7 @@ Thank you! ♡
 
 <br><br>
 
-We can't wait to celebrate with you.
+We are so grateful for your love and support. We can't wait to celebrate with you.
 
 </div>
 
@@ -724,6 +786,10 @@ WE CAN'T WAIT TO CELEBRATE WITH YOU
 
 
 <script>
+
+const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzyhmNjfoMyiC9KJmFtpTcHSP4N-j4-m58TzYJUe19qzhU2IVExSGMx66jJMTSJ_V4/exec";
+const GOOGLE_FORM_URL = "https://docs.google.com/forms/d/1Wg38h-ohJTTQhoPM_F1lk7JtPAPl9HXOjNEhqoiyQP8/viewform";
+const GOOGLE_MAPS_LINK = "PASTE_YOUR_GOOGLE_MAPS_LINK_HERE";
 
 const envelope =
 document.getElementById("envelope");
@@ -752,45 +818,61 @@ behavior:"smooth"
 
 const form =
 document.getElementById("rsvpForm");
+const mapLink = document.querySelector(".location");
+
+if (mapLink && GOOGLE_MAPS_LINK && !GOOGLE_MAPS_LINK.includes("PASTE_")) {
+  mapLink.setAttribute("href", GOOGLE_MAPS_LINK);
+  mapLink.onclick = null;
+}
+
+function submitToGoogleSheet(payload) {
+  if (!GOOGLE_APPS_SCRIPT_URL || GOOGLE_APPS_SCRIPT_URL.includes("PASTE_")) {
+    return Promise.reject(new Error("Google Apps Script URL not configured."));
+  }
+
+  return fetch(GOOGLE_APPS_SCRIPT_URL, {
+    method: "POST",
+    mode: "cors",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+}
+
+function showThanksState() {
+  form.style.display = "none";
+  document.getElementById("thanks").style.display = "block";
+}
 
 form.addEventListener("submit",function(e){
+  e.preventDefault();
 
-e.preventDefault();
+  const formData = new FormData(form);
+  const payload = {
+    name: formData.get("name") || "",
+    attendance: formData.get("attendance") || "",
+    guests: formData.get("guests") || "1",
+    sangeeth: formData.get("sangeeth") === "yes" ? "Yes" : "No",
+    haldi: formData.get("haldi") === "yes" ? "Yes" : "No",
+    wedding: formData.get("wedding") === "yes" ? "Yes" : "No",
+    message: formData.get("message") || "",
+    submittedAt: new Date().toISOString()
+  };
 
-const formData =
-new FormData(form);
-
-fetch("/",{
-
-method:"POST",
-
-headers:{
-"Content-Type":
-"application/x-www-form-urlencoded"
-},
-
-body:
-new URLSearchParams(formData).toString()
-
-})
-
-.then(function(){
-
-form.style.display="none";
-
-document
-.getElementById("thanks")
-.style.display="block";
-
-})
-
-.catch(function(){
-
-alert(
-"Please try submitting your RSVP again."
-);
-
-});
+  submitToGoogleSheet(payload)
+    .then(function(response) {
+      if (!response.ok) {
+        throw new Error("Google Sheets submission failed.");
+      }
+      showThanksState();
+    })
+    .catch(function() {
+      if (GOOGLE_FORM_URL && !GOOGLE_FORM_URL.includes("PASTE_")) {
+        window.open(GOOGLE_FORM_URL, "_blank");
+      }
+      showThanksState();
+    });
 
 });
 
