@@ -779,6 +779,8 @@ Your RSVP could not be sent from this page right now. Please use the Google Form
 </form>
 
 
+</div>
+
 <div
 class="thanks"
 id="thanks"
@@ -792,8 +794,6 @@ We are so grateful for your love and support. We can't wait to celebrate with yo
 
 </div>
 
-</div>
-
 
 <div class="end">
 WE CAN'T WAIT TO CELEBRATE WITH YOU
@@ -804,7 +804,7 @@ WE CAN'T WAIT TO CELEBRATE WITH YOU
 
 <script>
 
-const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwxzINshKymjM_HdLtlt90XowI9mOGw7XGHEVUSZTI_yzbyT22bbjpiU-IVzQPJDb6b/exec";
+const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyvhtpVvXDksPvmtAdq0wZwW_Jtt5xSg3trWOqYqm8sk3Q0WBvaUGTNkZv5jC6hZBw0/exec";
 const GOOGLE_FORM_URL = "https://docs.google.com/forms/d/1Wg38h-ohJTTQhoPM_F1lk7JtPAPl9HXOjNEhqoiyQP8/viewform";
 const GOOGLE_MAPS_LINK = "PASTE_YOUR_GOOGLE_MAPS_LINK_HERE";
 
@@ -835,6 +835,7 @@ behavior:"smooth"
 
 const form =
 document.getElementById("rsvpForm");
+const rsvpSection = document.getElementById("rsvp");
 const mapLink = document.querySelector(".location");
 
 if (mapLink && GOOGLE_MAPS_LINK && !GOOGLE_MAPS_LINK.includes("PASTE_")) {
@@ -858,7 +859,9 @@ function submitToGoogleSheet(payload) {
 }
 
 function showThanksState() {
-  form.style.display = "none";
+  if (rsvpSection) {
+    rsvpSection.style.display = "none";
+  }
   document.getElementById("thanks").style.display = "block";
 }
 
