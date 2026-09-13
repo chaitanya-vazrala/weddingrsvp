@@ -1204,9 +1204,7 @@ input:checked
 
 .event-choice-grid{
   display:grid;
-  grid-template-columns:1fr;
-  max-width:280px;
-  margin:0 auto;
+  grid-template-columns:repeat(3,1fr);
   gap:11px;
 }
 
@@ -1709,7 +1707,7 @@ footer{
 
 
     <div class="hero-date">
-      OCTOBER 25, 2026
+      OCTOBER 23 • 24 • 25
     </div>
 
 
@@ -1720,7 +1718,7 @@ footer{
 
       With the blessings of our families,
       we invite you to celebrate
-      our wedding day of love,
+      three beautiful days of love,
       tradition and togetherness.
 
     </p>
@@ -1811,16 +1809,90 @@ footer{
     </div>
 
     <h2 class="section-title">
-      Wedding Event
+      Wedding Events
     </h2>
 
   </div>
 
 
-  <div class="events-grid" style="display:flex; justify-content:center; max-width:400px; margin:45px auto 0;">
+  <div class="events-grid">
 
 
-    <article class="event-card" style="width:100%;">
+    <article class="event-card">
+
+      <div class="event-top">
+        💃🏽
+      </div>
+
+      <div class="event-content">
+
+        <div class="event-date">
+          OCTOBER 23
+        </div>
+
+        <h3>
+          Sangeeth
+        </h3>
+
+        <div class="telugu">
+          సంగీత్
+        </div>
+
+        <p>
+
+          Friday evening,
+          8:00 PM – 12:00 AM.
+
+          <br><br>
+
+          An evening filled with music,
+          dancing, laughter and celebration.
+
+        </p>
+
+      </div>
+
+    </article>
+
+
+    <article class="event-card">
+
+      <div class="event-top">
+        🌼
+      </div>
+
+      <div class="event-content">
+
+        <div class="event-date">
+          OCTOBER 24
+        </div>
+
+        <h3>
+          Haldi
+        </h3>
+
+        <div class="telugu">
+          పసుపు వేడుక
+        </div>
+
+        <p>
+
+          Saturday afternoon.
+
+          <br><br>
+
+          A colorful celebration of
+          turmeric, blessings,
+          laughter and beautiful beginnings.
+
+        </p>
+
+      </div>
+
+    </article>
+
+
+    <article class="event-card">
 
       <div class="event-top">
         🪷
@@ -2501,14 +2573,110 @@ footer{
         </div>
 
 
-        <!-- EVENTS (Hidden visually, preserved for spreadsheet/payload mapping) -->
-        <div id="eventsGroup" style="display:none;">
-          <input
-            type="checkbox"
-            name="Events attending"
-            value="Wedding - October 25"
-            checked
-          >
+        <!-- EVENTS -->
+
+        <div
+          class="form-group"
+          id="eventsGroup"
+        >
+
+          <div class="form-label">
+
+            Which events will you attend?
+
+            <span class="required">
+              *
+            </span>
+
+          </div>
+
+
+          <div class="event-choice-grid">
+
+
+            <label class="event-choice">
+
+              <input
+                type="checkbox"
+                name="Events attending"
+                value="Sangeeth - October 23"
+              >
+
+              <span class="event-choice-box">
+
+                <span class="event-choice-icon">
+                  💃🏽
+                </span>
+
+                <strong>
+                  Sangeeth
+                </strong>
+
+                <small>
+                  October 23
+                </small>
+
+              </span>
+
+            </label>
+
+
+            <label class="event-choice">
+
+              <input
+                type="checkbox"
+                name="Events attending"
+                value="Haldi - October 24"
+              >
+
+              <span class="event-choice-box">
+
+                <span class="event-choice-icon">
+                  🌼
+                </span>
+
+                <strong>
+                  Haldi
+                </strong>
+
+                <small>
+                  October 24
+                </small>
+
+              </span>
+
+            </label>
+
+
+            <label class="event-choice">
+
+              <input
+                type="checkbox"
+                name="Events attending"
+                value="Wedding - October 25"
+              >
+
+              <span class="event-choice-box">
+
+                <span class="event-choice-icon">
+                  🪷
+                </span>
+
+                <strong>
+                  Wedding
+                </strong>
+
+                <small>
+                  October 25
+                </small>
+
+              </span>
+
+            </label>
+
+
+          </div>
+
         </div>
 
 
@@ -2734,7 +2902,7 @@ footer{
 
   <div class="footer-small">
 
-    OCTOBER 25, 2026
+    OCTOBER 23 • 24 • 25
 
     &nbsp; ✦ &nbsp;
 
@@ -2965,11 +3133,6 @@ attendanceInputs.forEach(
 
           if (guestCountGroup) guestCountGroup.style.display = "block";
           if (eventsGroup) eventsGroup.style.display = "block";
-
-          // Ensure Wedding is checked when accepts section is shown
-          document.querySelectorAll('input[name="Events attending"]').forEach(function(el) {
-            el.checked = true;
-          });
 
         }
 
