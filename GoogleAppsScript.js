@@ -118,6 +118,9 @@ function doPost(e) {
     // Send instant notification email to hosts
     sendHostNotificationEmail(payload);
 
+    // Send instant confirmation email to guest
+    sendGuestConfirmationEmail(payload);
+
     return ContentService
       .createTextOutput(JSON.stringify({ success: true, message: "RSVP recorded successfully." }))
       .setMimeType(ContentService.MimeType.JSON);
@@ -245,6 +248,109 @@ function sendHostNotificationEmail(payload) {
       console.warn("Failed sending notification email to " + emailAddress + ": " + err.toString());
     }
   });
+}
+
+/**
+ * Sends a confirmation email to the guest upon successful RSVP submission
+ */
+function sendGuestConfirmationEmail(payload) {
+  const name = payload.name;
+  const email = payload.email ? payload.email.toString().trim() : "";
+  const attendance = payload.attendance;
+  const guests = payload.guests || "0";
+  const sangeeth = payload.sangeeth || "No";
+  const haldi = payload.haldi || "No";
+  const wedding = payload.wedding || "No";
+  const message = payload.message || "";
+
+  if (!email) {
+    console.log("No email address provided for guest: " + name + ". Group confirmation skipped.");
+    return;
+  }
+
+  const isAccepting = (attendance === "Yes" || attendance.toLowerCase().includes("accept"));
+  const subject = isAccepting 
+    ? "🎉 RSVP Confirmed! Chaitanya & Mounisha Wedding"
+    : "💌 Thank You for your Response - Chaitanya & Mounisha Wedding";
+
+  let htmlBody = `
+    <div style="font-family: Georgia, serif; max-width: 580px; margin: auto; padding: 35px 25px; border: 1px solid #dfc9a4; background-color: #fffdf9; color: #4d4037; line-height: 1.8; border-radius: 8px;">
+      
+      <!-- Top Floral Accent -->
+      <div style="text-align: center; color: #c79a4d; font-size: 24px; margin-bottom: 20px;">
+        ❀ &nbsp; ✦ &nbsp; ❀
+      </div>
+      
+      <!-- Main Header -->
+      <h2 style="color: #963d49; text-align: center; font-weight: normal; margin: 0 0 10px; font-size: 26px;">
+        Hello ${name},
+      </h2>
+  `;
+
+  if (isAccepting) {
+    htmlBody += `
+      <p style="text-align: center; font-size: 15px; color: #725d50; margin: 0 0 30px;">
+        Friendly confirmation that we have received your RSVP! We can't wait to celebrate these beautiful days of love and togetherness with you.
+      </p>
+      
+      <div style="background-color: #fffbfa; border: 1px dashed #ddc2ad; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(117,43,52,0.02);">
+        <span style="font-size: 11px; color: #963d49; letter-spacing: 2px; font-weight: bold; display: block; margin-bottom: 6px;">
+          YOUR RSVP DETAILS
+        </span>
+        <p style="color: #3d2f26; font-size: 14px; margin: 0; line-height: 1.8;">
+          <strong>Attendance:</strong> Joyfully Accepting<br>
+          <strong>Number of Guests:</strong> ${guests}<br>
+          <strong>Events Selected:</strong>
+        </p>
+        <p style="color: #46624d; font-size: 14px; font-weight: bold; margin: 5px 0 0; line-height: 1.6;">
+          ${sangeeth === "Yes" ? "💃🏽 Sangeeth — Oct 23<br>" : ""}
+          ${haldi === "Yes" ? "🌼 Haldi — Oct 24<br>" : ""}
+          ${wedding === "Yes" ? "🪷 Wedding — Oct 25<br>" : ""}
+        </p>
+      </div>
+
+      <p style="font-size: 13.5px; color: #6a5348; text-align: center; margin-bottom: 25px; line-height: 1.6; background-color: #f7ede2; padding: 12px; border-radius: 6px;">
+        <strong>Need to change your response?</strong><br>
+        No worries! If your plans change, simply visit our wedding website at <a href="https://cheywedsmounisha.com" target="_blank" style="color: #963d49; text-decoration: underline; font-weight: bold;">cheywedsmounisha.com</a> and re-submit the RSVP form with your updated details, or respond to this email and let us know!
+      </p>
+    `;
+  } else {
+    htmlBody += `
+      <p style="text-align: center; font-size: 15px; color: #725d50; margin: 0 0 30px;">
+        Thank you for sharing your response. We will miss celebrating with you, but we are incredibly grateful for your love and warm wishes from afar!
+      </p>
+
+      <p style="font-size: 13.5px; color: #6a5348; text-align: center; margin-bottom: 25px; line-height: 1.6; background-color: #f7ede2; padding: 12px; border-radius: 6px;">
+        <strong>Want to adjust your response?</strong><br>
+        If your plans change and you are able to join us after all, just visit <a href="https://cheywedsmounisha.com" target="_blank" style="color: #963d49; text-decoration: underline; font-weight: bold;">cheywedsmounisha.com</a> and submit a new RSVP, or respond to this email to update us!
+      </p>
+    `;
+  }
+
+  htmlBody += `
+      <div style="text-align: center; border-top: 1px solid #f2e3d3; padding-top: 25px; margin-top: 30px;">
+        <span style="display: block; font-size: 12px; color: #8c786c; margin-bottom: 10px; letter-spacing: 1px;">
+          WITH LOVE & APPRECIATION,
+        </span>
+        <span style="font-family: 'Brush Script MT', cursive; font-size: 32px; color: #963d49; line-height: 1;">
+          Chaitanya & Mounisha
+        </span>
+      </div>
+      
+    </div>
+  `;
+
+  try {
+    MailApp.sendEmail({
+      to: email,
+      subject: subject,
+      htmlBody: htmlBody,
+      replyTo: "cheyreddy30@gmail.com" // Sets default reply route to hosts for changes
+    });
+    console.log("Successfully sent instant confirmation email to guest: " + email);
+  } catch(err) {
+    console.error("Failed sending instant confirmation email to guest " + email + ": " + err.toString());
+  }
 }
 
 /**
