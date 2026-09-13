@@ -336,7 +336,7 @@ nav .rsvp-nav{
   border-radius:25px;
   background:#f4d69f;
   color:#7c3440;
-  font-weight:bold;
+  font-weight:600;
 }
 
 
@@ -446,9 +446,9 @@ nav .rsvp-nav{
 
   font-size:
     clamp(
-      55px,
-      10vw,
-      105px
+      46px,
+      8.5vw,
+      82px
     );
 
   font-weight:normal;
@@ -485,7 +485,7 @@ nav .rsvp-nav{
 .primary-button{
   display:inline-block;
   margin-top:31px;
-  padding:15px 31px;
+  padding:14px 28px;
   border-radius:30px;
 
   background:var(--maroon);
@@ -493,11 +493,20 @@ nav .rsvp-nav{
   color:white;
   text-decoration:none;
 
-  font:700 11px Arial,sans-serif;
-  letter-spacing:3px;
+  font:500 11px Arial,sans-serif;
+  font-weight:600;
+  letter-spacing:2.5px;
 
   box-shadow:
-    0 10px 25px
+    0 8px 20px
+    rgba(115,45,53,.15);
+  transition: all .25s ease;
+}
+
+.primary-button:hover{
+  transform: translateY(-2px);
+  box-shadow:
+    0 12px 25px
     rgba(115,45,53,.22);
 }
 
@@ -510,18 +519,19 @@ nav .rsvp-nav{
   margin-bottom:9px;
   color:#816d5c;
   font:10px Arial,sans-serif;
-  letter-spacing:4px;
+  letter-spacing:3.5px;
 }
 
 .section-title{
   margin:0;
   color:var(--maroon);
+  letter-spacing:0.5px;
 
   font-size:
     clamp(
-      34px,
-      5vw,
-      50px
+      28px,
+      4.5vw,
+      40px
     );
 
   font-weight:normal;
@@ -535,7 +545,7 @@ nav .rsvp-nav{
 .story-section{
   position:relative;
   overflow:hidden;
-  padding:100px 20px;
+  padding:80px 20px;
   background:var(--sage);
 }
 
@@ -581,7 +591,7 @@ nav .rsvp-nav{
 ========================================================= */
 
 .events-section{
-  padding:95px 20px;
+  padding:80px 20px;
   background:#fff8e9;
 }
 
@@ -661,7 +671,7 @@ nav .rsvp-nav{
 .event-content h3{
   margin:9px 0 4px;
   color:var(--maroon);
-  font-size:29px;
+  font-size:24px;
   font-weight:normal;
 }
 
@@ -682,7 +692,7 @@ nav .rsvp-nav{
 ========================================================= */
 
 .ritual-intro{
-  padding:90px 20px;
+  padding:80px 20px;
   text-align:center;
   background:#f0e3c5;
 }
@@ -720,7 +730,7 @@ nav .rsvp-nav{
 ========================================================= */
 
 .rituals{
-  padding:95px 20px;
+  padding:80px 20px;
   background:var(--green);
   color:#fff5df;
 }
@@ -786,7 +796,7 @@ nav .rsvp-nav{
 .venue{
   position:relative;
   overflow:hidden;
-  padding:95px 20px;
+  padding:80px 20px;
   text-align:center;
 
   background:
@@ -813,7 +823,7 @@ nav .rsvp-nav{
 .venue-card h3{
   margin:8px 0;
   color:var(--maroon);
-  font-size:35px;
+  font-size:28px;
   font-weight:normal;
 }
 
@@ -831,7 +841,7 @@ nav .rsvp-nav{
   position:relative;
   overflow:hidden;
 
-  padding:95px 20px;
+  padding:80px 20px;
 
   background:
     linear-gradient(
@@ -941,7 +951,7 @@ nav .rsvp-nav{
 .registry-option h3{
   margin:0 0 8px;
   color:#963d49;
-  font-size:24px;
+  font-size:20px;
   font-weight:normal;
 }
 
@@ -954,7 +964,7 @@ nav .rsvp-nav{
 
 .registry-option span{
   color:#963d49;
-  font:700 10px Arial,sans-serif;
+  font:600 10px Arial,sans-serif;
   letter-spacing:2px;
 }
 
@@ -967,7 +977,7 @@ nav .rsvp-nav{
   position:relative;
   overflow:hidden;
 
-  padding:105px 20px;
+  padding:80px 20px;
 
   background:
     radial-gradient(
@@ -1029,9 +1039,9 @@ nav .rsvp-nav{
 
   font-size:
     clamp(
-      43px,
-      7vw,
-      62px
+      34px,
+      5.5vw,
+      48px
     );
 
   font-weight:normal;
@@ -1376,42 +1386,53 @@ input:checked
 
 
 /* =========================================================
-   FLOATING RSVP
+   BACK TO TOP
 ========================================================= */
 
-.floating-rsvp{
+.floating-back-to-top{
   position:fixed;
 
-  right:18px;
+  right:24px;
 
   bottom:
     calc(
-      18px +
+      24px +
       env(safe-area-inset-bottom)
     );
 
   z-index:700;
 
-  padding:14px 20px;
+  width:44px;
+  height:44px;
+  border-radius:50%;
 
-  border-radius:40px;
-
-  background:var(--maroon);
-
-  color:white;
+  background:rgba(255,252,244,.95);
+  border:1px solid var(--maroon);
+  color:var(--maroon);
   text-decoration:none;
 
-  font:
-    700
-    11px
-    Arial,
-    sans-serif;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 
-  letter-spacing:2px;
+  font:18px Arial,sans-serif;
+  box-shadow:0 4px 15px rgba(150,61,73,.15);
+  transition:all .3s ease;
 
-  box-shadow:
-    0 8px 25px
-    rgba(75,29,34,.3);
+  opacity:0;
+  visibility:hidden;
+}
+
+.floating-back-to-top.show{
+  opacity:1;
+  visibility:visible;
+}
+
+.floating-back-to-top:hover{
+  background:var(--maroon);
+  color:white;
+  transform:translateY(-3px);
+  box-shadow:0 6px 20px rgba(150,61,73,.25);
 }
 
 
@@ -1531,9 +1552,12 @@ footer{
     padding-bottom:72px;
   }
 
-  .floating-rsvp{
-    right:12px;
-    padding:13px 17px;
+  .floating-back-to-top{
+    right:16px;
+    bottom:calc(16px + env(safe-area-inset-bottom));
+    width:38px;
+    height:38px;
+    font-size:15px;
   }
 
 }
@@ -1613,15 +1637,15 @@ footer{
     VENUE
   </a>
 
-  <a href="#registry">
-    REGISTRY
-  </a>
-
   <a
     href="#rsvp"
     class="rsvp-nav"
   >
     RSVP
+  </a>
+
+  <a href="#registry">
+    REGISTRY
   </a>
 
 </nav>
@@ -2291,128 +2315,6 @@ footer{
 
 
 <!-- =========================================================
-     GIFT REGISTRY
-========================================================= -->
-
-<section
-  class="registry-section reveal"
-  id="registry"
->
-
-  <div class="registry-card">
-
-    <div class="eyebrow">
-      WITH LOVE & GRATITUDE
-    </div>
-
-    <h2 class="section-title">
-      Gift Registry
-    </h2>
-
-    <p class="registry-intro">
-
-      Your presence at our celebration
-      is truly the greatest gift.
-
-      <br><br>
-
-      For those who have asked,
-      we have created a few registries
-      to help us begin this beautiful
-      new chapter together.
-
-    </p>
-
-
-    <div class="registry-grid">
-
-
-      <a
-        class="registry-option"
-        href="YOUR_AMAZON_REGISTRY_LINK"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-
-        <div class="registry-icon">
-          🎁
-        </div>
-
-        <h3>
-          Amazon
-        </h3>
-
-        <p>
-          Browse our Amazon wedding registry.
-        </p>
-
-        <span>
-          VIEW REGISTRY →
-        </span>
-
-      </a>
-
-
-      <a
-        class="registry-option"
-        href="YOUR_TARGET_REGISTRY_LINK"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-
-        <div class="registry-icon">
-          ♡
-        </div>
-
-        <h3>
-          Target
-        </h3>
-
-        <p>
-          View our Target wedding registry.
-        </p>
-
-        <span>
-          VIEW REGISTRY →
-        </span>
-
-      </a>
-
-
-      <a
-        class="registry-option"
-        href="YOUR_OTHER_REGISTRY_LINK"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-
-        <div class="registry-icon">
-          ✨
-        </div>
-
-        <h3>
-          Other Registry
-        </h3>
-
-        <p>
-          Explore our additional registry.
-        </p>
-
-        <span>
-          VIEW REGISTRY →
-        </span>
-
-      </a>
-
-
-    </div>
-
-  </div>
-
-</section>
-
-
-<!-- =========================================================
      CUSTOM RSVP FORM
 ========================================================= -->
 
@@ -2865,6 +2767,128 @@ footer{
 
 
 <!-- =========================================================
+     GIFT REGISTRY
+========================================================= -->
+
+<section
+  class="registry-section reveal"
+  id="registry"
+>
+
+  <div class="registry-card">
+
+    <div class="eyebrow">
+      WITH LOVE & GRATITUDE
+    </div>
+
+    <h2 class="section-title">
+      Gift Registry
+    </h2>
+
+    <p class="registry-intro">
+
+      Your presence at our celebration
+      is truly the greatest gift.
+
+      <br><br>
+
+      For those who have asked,
+      we have created a few registries
+      to help us begin this beautiful
+      new chapter together.
+
+    </p>
+
+
+    <div class="registry-grid">
+
+
+      <a
+        class="registry-option"
+        href="YOUR_AMAZON_REGISTRY_LINK"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+
+        <div class="registry-icon">
+          🎁
+        </div>
+
+        <h3>
+          Amazon
+        </h3>
+
+        <p>
+          Browse our Amazon wedding registry.
+        </p>
+
+        <span>
+          VIEW REGISTRY →
+        </span>
+
+      </a>
+
+
+      <a
+        class="registry-option"
+        href="YOUR_TARGET_REGISTRY_LINK"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+
+        <div class="registry-icon">
+          ♡
+        </div>
+
+        <h3>
+          Target
+        </h3>
+
+        <p>
+          View our Target wedding registry.
+        </p>
+
+        <span>
+          VIEW REGISTRY →
+        </span>
+
+      </a>
+
+
+      <a
+        class="registry-option"
+        href="YOUR_OTHER_REGISTRY_LINK"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+
+        <div class="registry-icon">
+          ✨
+        </div>
+
+        <h3>
+          Other Registry
+        </h3>
+
+        <p>
+          Explore our additional registry.
+        </p>
+
+        <span>
+          VIEW REGISTRY →
+        </span>
+
+      </a>
+
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- =========================================================
      FOOTER
 ========================================================= -->
 
@@ -2891,14 +2915,16 @@ footer{
 
 
 <!-- =========================================================
-     FLOATING RSVP
+     BACK TO TOP
 ========================================================= -->
 
 <a
-  class="floating-rsvp"
-  href="#rsvp"
+  class="floating-back-to-top"
+  id="backToTop"
+  href="#home"
+  aria-label="Back to top"
 >
-  ♥ RSVP
+  ↑
 </a>
 
 
@@ -2991,6 +3017,22 @@ revealItems.forEach(
 
   }
 );
+
+
+/* =========================================================
+   BACK TO TOP SCROLL
+========================================================= */
+
+const backToTopBtn = document.getElementById("backToTop");
+if (backToTopBtn) {
+  window.addEventListener("scroll", function() {
+    if (window.scrollY > 300) {
+      backToTopBtn.classList.add("show");
+    } else {
+      backToTopBtn.classList.remove("show");
+    }
+  });
+}
 
 
 /* =========================================================
