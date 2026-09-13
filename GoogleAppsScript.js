@@ -556,3 +556,48 @@ function sendGuestReminderEmail(name, email, eventName, daysLeftText, eventTime,
     console.error("Failed sending reminder to " + email + " for event " + eventName + ": " + err.toString());
   }
 }
+
+/**
+ * TEST FUNCTION: Triggers immediate sample reminder emails for Sangeeth, Haldi, and Wedding.
+ * Run this function manually in your Apps Script Editor to verify exactly what your guest reminder emails look like!
+ * It will send the test emails to BOTH cheyreddy30@gmail.com and monisharkan@gmail.com.
+ */
+function sendTestRemindersToHosts() {
+  const testName = "Test Guest";
+  
+  console.log("Starting instant reminder email test for hosts...");
+  
+  NOTIFICATION_EMAILS.forEach(function(email) {
+    // 1. Sangeeth 4-Day Sample Reminder
+    sendGuestReminderEmail(
+      testName, 
+      email, 
+      "Sangeeth Celebration (Test)", 
+      "4 days", 
+      "Friday, Oct 23rd @ 8:00 PM", 
+      "💃🏽 music, dance, laughter, and celebration"
+    );
+    
+    // 2. Haldi 2-Day Sample Reminder
+    sendGuestReminderEmail(
+      testName, 
+      email, 
+      "Haldi Ceremony (Test)", 
+      "2 days", 
+      "Saturday, Oct 24th (Afternoon)", 
+      "🌼 turmeric blessings, laughter, and bright beginnings"
+    );
+    
+    // 3. Wedding 4-Day Sample Reminder
+    sendGuestReminderEmail(
+      testName, 
+      email, 
+      "Wedding Ceremony (Test)", 
+      "4 days", 
+      "Sunday, Oct 25th @ 9:45 AM", 
+      "🪷 sacred rituals, family blessings, and matching our beautiful forevers"
+    );
+  });
+  
+  console.log("All sample reminders successfully sent to hosts: " + NOTIFICATION_EMAILS.join(", "));
+}
