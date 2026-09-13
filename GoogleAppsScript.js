@@ -32,6 +32,23 @@ const NOTIFICATION_EMAILS = [
   "monisharkan@gmail.com"
 ];
 
+// Helper to obtain spreadsheet reference reliably, supporting container-bound or openById operations
+function getSS() {
+  let ss = null;
+  try {
+    ss = SpreadsheetApp.getActiveSpreadsheet();
+  } catch(e) {}
+  if (!ss) {
+    try {
+      ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    } catch(e) {
+      console.error("Could not obtain Spreadsheet reference: " + e.toString());
+      throw new Error("Spreadsheet access denied. Ensure the spreadsheet ID is correct and shared with appropriate permissions.");
+    }
+  }
+  return ss;
+}
+
 // Event Dates (Formatted as YYYY-MM-DD for reliable comparison)
 // Sangeeth: Oct 23, 2026. Haldi: Oct 24, 2026. Wedding: Oct 25, 2026.
 const EVENT_DATES = {
@@ -137,7 +154,7 @@ function doPost(e) {
  * Gets or creates the RSVP worksheet with appropriate column headers
  */
 function getOrCreateRSVPSheet() {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const ss = getSS();
   let sheet = ss.getSheetByName(SHEET_NAME);
 
   if (!sheet) {
@@ -359,7 +376,7 @@ function sendGuestConfirmationEmail(payload) {
  */
 function checkAndSendReminders() {
   try {
-    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const ss = getSS();
     const sheet = ss.getSheetByName(SHEET_NAME);
     if (!sheet) {
       console.warn("Sheet '" + SHEET_NAME + "' not found. Reminders execution aborted.");
