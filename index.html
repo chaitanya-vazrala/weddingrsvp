@@ -759,6 +759,11 @@ type="submit"
 SEND RSVP
 </button>
 
+<p id="rsvpFallback" style="display:none; margin-top:16px; font-size:13px; line-height:1.6; color:#6a463d; text-align:center;">
+Your RSVP could not be sent from this page right now. Please use the Google Form instead:
+<a href="https://docs.google.com/forms/d/1Wg38h-ohJTTQhoPM_F1lk7JtPAPl9HXOjNEhqoiyQP8/viewform" target="_blank" rel="noopener noreferrer">Open RSVP Form</a>
+</p>
+
 </form>
 
 
@@ -845,6 +850,13 @@ function showThanksState() {
   document.getElementById("thanks").style.display = "block";
 }
 
+function showFallbackMessage() {
+  const fallback = document.getElementById("rsvpFallback");
+  if (fallback) {
+    fallback.style.display = "block";
+  }
+}
+
 form.addEventListener("submit",function(e){
   e.preventDefault();
 
@@ -868,9 +880,7 @@ form.addEventListener("submit",function(e){
       showThanksState();
     })
     .catch(function() {
-      if (GOOGLE_FORM_URL && !GOOGLE_FORM_URL.includes("PASTE_")) {
-        window.open(GOOGLE_FORM_URL, "_blank");
-      }
+      showFallbackMessage();
       showThanksState();
     });
 
