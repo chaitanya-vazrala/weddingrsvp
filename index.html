@@ -2527,6 +2527,37 @@ footer{
         </div>
 
 
+        <!-- EMAIL -->
+
+        <div class="form-group">
+
+          <label
+            class="form-label"
+            for="guestEmail"
+          >
+
+            Email Address
+
+            <span class="required">
+              *
+            </span>
+
+          </label>
+
+
+          <input
+            class="form-input"
+            type="email"
+            id="guestEmail"
+            name="Your email"
+            placeholder="your@email.com"
+            required
+            autocomplete="email"
+          >
+
+        </div>
+
+
         <!-- ATTENDANCE -->
 
         <div class="form-group">
@@ -3187,12 +3218,19 @@ rsvpForm.addEventListener(
       .trim();
 
 
+      const guestEmail =
+      document
+      .getElementById("guestEmail")
+      ?.value
+      ?.trim() || "";
+
+
       const selectedEvents = Array.from(document.querySelectorAll('input[name="Events attending"]:checked')).map(el => el.value);
       const guestCountValue = document.getElementById("guestCount")?.value || "1";
 
       const gsPayload = {
         name: guestName,
-        email: "",
+        email: guestEmail,
         attendance: attendance.value === "Joyfully accepting" ? "Yes" : "No",
         guests: attendance.value === "Joyfully accepting" ? guestCountValue : "0",
         sangeeth: selectedEvents.some(v => v.includes("Sangeeth")) ? "Yes" : "No",
