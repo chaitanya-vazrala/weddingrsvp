@@ -183,29 +183,43 @@ function doPost(e) {
         message
       ]]);
 
-      // Update reminder statuses according to new attendance
-      if (attendance !== "Yes" && !attendance.toLowerCase().includes("accept")) {
-        // If declining, cancel all future event reminders
-        sheet.getRange(existingRowIndex, 10, 1, 6).setValues([["Cancelled", "Cancelled", "Cancelled", "Cancelled", "Cancelled", "Cancelled"]]);
-      } else {
-        // Reset reminder status for newly selected events or clear if unselected
-        const remValues = sheet.getRange(existingRowIndex, 10, 1, 6).getValues()[0];
-        const newRem = [
-          attendingSangeeth === "Yes" ? (remValues[0] === "Cancelled" ? "" : remValues[0]) : "N/A",
-          attendingSangeeth === "Yes" ? (remValues[1] === "Cancelled" ? "" : remValues[1]) : "N/A",
-          attendingHaldi === "Yes" ? (remValues[2] === "Cancelled" ? "" : remValues[2]) : "N/A",
-          attendingHaldi === "Yes" ? (remValues[3] === "Cancelled" ? "" : remValues[3]) : "N/A",
-          attendingWedding === "Yes" ? (remValues[4] === "Cancelled" ? "" : remValues[4]) : "N/A",
-          attendingWedding === "Yes" ? (remValues[5] === "Cancelled" ? "" : remValues[5]) : "N/A"
-        ];
-        sheet.getRange(existingRowIndex, 10, 1, 6).setValues([newRem]);
+      // Update reminder statuses according to new attendance if reminder columns exist
+      if (sheet.getMaxColumns() >= 15) {
+        try {
+          if (attendance !== "Yes" && !attendance.toLowerCase().includes("accept")) {
+            // If declining, cancel all future event reminders
+            sheet.getRange(existingRowIndex, 10, 1, 6).setValues([["Cancelled", "Cancelled", "Cancelled", "Cancelled", "Cancelled", "Cancelled"]]);
+          } else {
+            // Reset reminder status for newly selected events or clear if unselected
+            const remValues = sheet.getRange(existingRowIndex, 10, 1, 6).getValues()[0];
+            const newRem = [
+              attendingSangeeth === "Yes" ? (remValues[0] === "Cancelled" ? "" : remValues[0]) : "N/A",
+              attendingSangeeth === "Yes" ? (remValues[1] === "Cancelled" ? "" : remValues[1]) : "N/A",
+              attendingHaldi === "Yes" ? (remValues[2] === "Cancelled" ? "" : remValues[2]) : "N/A",
+              attendingHaldi === "Yes" ? (remValues[3] === "Cancelled" ? "" : remValues[3]) : "N/A",
+              attendingWedding === "Yes" ? (remValues[4] === "Cancelled" ? "" : remValues[4]) : "N/A",
+              attendingWedding === "Yes" ? (remValues[5] === "Cancelled" ? "" : remValues[5]) : "N/A"
+            ];
+            sheet.getRange(existingRowIndex, 10, 1, 6).setValues([newRem]);
+          }
+        } catch (remErr) {
+          console.warn("Reminder columns check skipped: " + remErr.toString());
+        }
       }
 
-      // Send update notification email to hosts
-      sendHostNotificationEmail(payload, true /* isUpdate */);
+      // Send update notification email to hosts (safely)
+      try {
+        sendHostNotificationEmail(payload, true /* isUpdate */);
+      } catch (hostErr) {
+        console.warn("Host email warning: " + hostErr.toString());
+      }
 
-      // Send update confirmation email to guest
-      sendGuestConfirmationEmail(payload, true /* isUpdate */);
+      // Send update confirmation email to guest (safely)
+      try {
+        sendGuestConfirmationEmail(payload, true /* isUpdate */);
+      } catch (guestErr) {
+        console.warn("Guest email warning: " + guestErr.toString());
+      }
 
       return ContentService
         .createTextOutput(JSON.stringify({
@@ -237,11 +251,19 @@ function doPost(e) {
 
     sheet.appendRow(rowData);
 
-    // Send instant notification email to hosts
-    sendHostNotificationEmail(payload, false /* isUpdate */);
+    // Send instant notification email to hosts (safely)
+    try {
+      sendHostNotificationEmail(payload, false /* isUpdate */);
+    } catch (hostErr) {
+      console.warn("Host email warning: " + hostErr.toString());
+    }
 
-    // Send instant confirmation email to guest
-    sendGuestConfirmationEmail(payload, false /* isUpdate */);
+    // Send instant confirmation email to guest (safely)
+    try {
+      sendGuestConfirmationEmail(payload, false /* isUpdate */);
+    } catch (guestErr) {
+      console.warn("Guest email warning: " + guestErr.toString());
+    }
 
     return ContentService
       .createTextOutput(JSON.stringify({
@@ -304,14 +326,15 @@ function getOrCreateRSVPSheet() {
 function sendHostNotificationEmail(payload, isUpdate) {
   const name = payload.name;
   const email = payload.email || "Not Provided";
-  const attendance = payload.attendance;
+  const attendance = (payload.attendance || "").toString();
+  const isAccepting = (attendance === "Yes" || attendance.toLowerCase().indexOf("accept") !== -1);
   const guests = payload.guests || "0";
   const sangeeth = payload.sangeeth || "No";
   const haldi = payload.haldi || "No";
   const wedding = payload.wedding || "No";
   const message = payload.message || "None";
 
-  const subject = (isUpdate ? "🔄 Updated Wedding RSVP from " : "🎉 New Wedding RSVP from ") + name + " (" + attendance + ")";
+  const subject = (isUpdate ? "🔄 Updated Wedding RSVP from " : "🎉 New Wedding RSVP from ") + name + " (" + (attendance || "Submitted") + ")";
 
   let htmlBody = `
     <div style="font-family: Georgia, serif; max-width: 600px; margin: auto; padding: 25px; border: 1px solid #e2cfb8; background-color: #fffcf8; color: #4d4037;">
@@ -337,11 +360,11 @@ function sendHostNotificationEmail(payload, isUpdate) {
         </tr>
         <tr style="border-bottom: 1px solid #f2e7db;">
           <td style="padding: 10px; font-weight: bold; color: #725d50;">Attendance:</td>
-          <td style="padding: 10px; color: #3d2f26;"><strong style="color: ${attendance === 'Yes' || attendance.includes('accepting') ? '#46624d' : '#963d49'};">${attendance}</strong></td>
+          <td style="padding: 10px; color: #3d2f26;"><strong style="color: ${isAccepting ? '#46624d' : '#963d49'};">${attendance}</strong></td>
         </tr>
   `;
 
-  if (attendance === "Yes" || attendance.includes("accepting")) {
+  if (isAccepting) {
     htmlBody += `
         <tr style="border-bottom: 1px solid #f2e7db;">
           <td style="padding: 10px; font-weight: bold; color: #725d50;">Number of Guests:</td>

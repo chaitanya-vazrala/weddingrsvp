@@ -3267,84 +3267,102 @@ rsvpForm.addEventListener(
 );
 
 
+function checkDuplicateInSheet(name, email) {
+  return new Promise(function(resolve) {
+    if (!name || !email) return resolve(false);
+    var normName = name.toLowerCase().trim();
+    var normEmail = email.toLowerCase().trim();
+
+    var callbackName = "gvizCallback_" + Math.floor(Math.random() * 10000000);
+    var script = document.createElement("script");
+    var timer = setTimeout(function() {
+      cleanup();
+      resolve(false);
+    }, 4000);
+
+    function cleanup() {
+      clearTimeout(timer);
+      if (script && script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+      try {
+        delete window[callbackName];
+      } catch (e) {
+        window[callbackName] = undefined;
+      }
+    }
+
+    window[callbackName] = function(response) {
+      cleanup();
+      try {
+        if (response && response.table && Array.isArray(response.table.rows)) {
+          var rows = response.table.rows;
+          for (var i = 0; i < rows.length; i++) {
+            var row = rows[i];
+            if (row && row.c && row.c.length >= 2) {
+              var rName = (row.c[0] && row.c[0].v != null ? String(row.c[0].v) : "").toLowerCase().trim();
+              var rEmail = (row.c[1] && row.c[1].v != null ? String(row.c[1].v) : "").toLowerCase().trim();
+              if (rName === normName && rEmail === normEmail) {
+                return resolve(true);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Duplicate check parse warning:", err);
+      }
+      resolve(false);
+    };
+
+    script.onerror = function() {
+      cleanup();
+      resolve(false);
+    };
+
+    script.src = "https://docs.google.com/spreadsheets/d/1K7Z-zgcxGW53QsanV0V6W7ZLq16t-xIrs90vOfWf3G0/gviz/tq?tqx=responseHandler:" + callbackName + "&sheet=RSVP&tq=" + encodeURIComponent("select B, C") + "&_t=" + Date.now();
+    document.body.appendChild(script);
+  });
+}
+
+
 async function executeSubmission(isUpdate){
 
-  if(isUpdate){
-    if (dupUpdateBtn) {
-      dupUpdateBtn.disabled = true;
-      dupUpdateBtn.textContent = "UPDATING...";
-    }
-  } else {
-    submitButton.disabled = true;
-    submitButton.textContent = "SENDING...";
-  }
-
-  try{
-
-    const attendance =
+  const attendance =
     document.querySelector(
       'input[name="Will you be joining us"]:checked'
     );
 
-    const guestName =
+  const guestName =
     document
     .getElementById("guestName")
     .value
     .trim();
 
-    const guestEmail =
+  const guestEmail =
     document
     .getElementById("guestEmail")
     ?.value
     ?.trim() || "";
 
-    const selectedEvents = Array.from(document.querySelectorAll('input[name="Events attending"]:checked')).map(el => el.value);
-    const guestCountValue = document.getElementById("guestCount")?.value || "1";
+  // If not already confirmed by user as an update, check if RSVP exists
+  if(!isUpdate){
+    submitButton.disabled = true;
+    submitButton.textContent = "CHECKING...";
 
-    const gsPayload = {
-      name: guestName,
-      email: guestEmail,
-      attendance: attendance.value === "Joyfully accepting" ? "Yes" : "No",
-      guests: attendance.value === "Joyfully accepting" ? guestCountValue : "0",
-      sangeeth: selectedEvents.some(v => v.includes("Sangeeth")) ? "Yes" : "No",
-      haldi: selectedEvents.some(v => v.includes("Haldi")) ? "Yes" : "No",
-      wedding: selectedEvents.some(v => v.includes("Wedding")) ? "Yes" : "No",
-      message: document.getElementById("message")?.value || "",
-      allowUpdate: !!isUpdate,
-      submittedAt: new Date().toISOString()
-    };
-
-    const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwkLjDytQyphxTbLS7e-yhslMOshoYFWiKXrPcOvvNxGaYOZ_970a1rGgqTaK-FsDK9/exec";
-
-    let gsResult = null;
-    let gsFetchError = null;
-
-    if (GOOGLE_APPS_SCRIPT_URL && !GOOGLE_APPS_SCRIPT_URL.includes("PASTE_")) {
-      try {
-        const gsRes = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-          method: "POST",
-          mode: "cors",
-          headers: {
-            "Content-Type": "text/plain;charset=utf-8"
-          },
-          body: JSON.stringify(gsPayload)
-        });
-        if (gsRes.ok) {
-          gsResult = await gsRes.json();
-        }
-      } catch (err) {
-        gsFetchError = err;
-        console.warn("Google Apps Script fetch error:", err);
-      }
+    let isDuplicate = false;
+    try {
+      isDuplicate = await checkDuplicateInSheet(guestName, guestEmail);
+    } catch (checkErr) {
+      console.warn("Duplicate check error:", checkErr);
+      isDuplicate = false;
     }
 
-    // Duplicate detected and user hasn't yet confirmed overwrite
-    if (gsResult && gsResult.duplicate && !isUpdate) {
+    if (isDuplicate) {
       submitButton.disabled = false;
       submitButton.textContent = "SEND MY RSVP";
 
       if (dupGuestInfo) {
-        dupGuestInfo.textContent = guestName + " (" + guestEmail + ")";
+        dupGuestInfo.textContent = guestName + (guestEmail ? " (" + guestEmail + ")" : "");
       }
       if (duplicateModal) {
         duplicateModal.style.display = "flex";
@@ -3359,22 +3377,45 @@ async function executeSubmission(isUpdate){
       }
       return;
     }
+  }
 
-    // Close duplicate modal if open
-    if (duplicateModal) {
-      duplicateModal.style.display = "none";
-      document.body.classList.remove("modal-open");
+  // Proceed with submission
+  if(isUpdate){
+    if (dupUpdateBtn) {
+      dupUpdateBtn.disabled = true;
+      dupUpdateBtn.textContent = "UPDATING...";
     }
+  }
+  submitButton.disabled = true;
+  submitButton.textContent = "SENDING...";
 
-    // Submit to Netlify
-    const data = new FormData(rsvpForm);
-    if (isUpdate) {
-      data.append("Updated RSVP", "Yes");
-    }
+  try{
 
-    let netlifySuccess = false;
+    const selectedEvents = Array.from(document.querySelectorAll('input[name="Events attending"]:checked')).map(el => el.value);
+    const guestCountValue = document.getElementById("guestCount")?.value || "1";
+
+    const gsPayload = {
+      name: guestName,
+      email: guestEmail,
+      attendance: attendance ? (attendance.value === "Joyfully accepting" ? "Yes" : "No") : "Yes",
+      guests: attendance && attendance.value === "Joyfully accepting" ? guestCountValue : "0",
+      sangeeth: selectedEvents.some(v => v.includes("Sangeeth")) ? "Yes" : "No",
+      haldi: selectedEvents.some(v => v.includes("Haldi")) ? "Yes" : "No",
+      wedding: selectedEvents.some(v => v.includes("Wedding")) ? "Yes" : "No",
+      message: document.getElementById("message")?.value || "",
+      allowUpdate: !!isUpdate,
+      submittedAt: new Date().toISOString()
+    };
+
+    const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwkLjDytQyphxTbLS7e-yhslMOshoYFWiKXrPcOvvNxGaYOZ_970a1rGgqTaK-FsDK9/exec";
+
+    // Non-blocking Netlify submission (fails silently on static hosting like GitHub Pages)
     try {
-      const netlifyRes = await fetch(
+      const data = new FormData(rsvpForm);
+      if (isUpdate) {
+        data.append("Updated RSVP", "Yes");
+      }
+      fetch(
         "/",
         {
           method: "POST",
@@ -3383,22 +3424,34 @@ async function executeSubmission(isUpdate){
           },
           body: encodeFormData(data)
         }
-      );
-      if (netlifyRes.ok || netlifyRes.status === 200) {
-        netlifySuccess = true;
-      }
-    } catch (err) {
-      console.warn("Netlify fetch error:", err);
-    }
+      ).catch(function() {});
+    } catch (netErr) {}
 
-    const gsSuccess = gsResult && gsResult.success;
-    if (!gsSuccess && !netlifySuccess) {
-      throw new Error(gsFetchError || "Form submission couldn't be confirmed on any service.");
+    // Send to Google Sheets via Google Apps Script using no-cors to avoid cross-origin redirect blocks
+    const gasPromise = fetch(GOOGLE_APPS_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+      },
+      body: JSON.stringify(gsPayload)
+    });
+
+    // Safety timeout: guaranteed transition after 5 seconds even on slow networks
+    const timeoutPromise = new Promise(function(resolve) {
+      setTimeout(resolve, 5000);
+    });
+
+    await Promise.race([gasPromise, timeoutPromise]);
+
+    // Close duplicate modal if open
+    if (duplicateModal) {
+      duplicateModal.style.display = "none";
+      document.body.classList.remove("modal-open");
     }
 
     if(
-      attendance.value ===
-      "Regretfully declining"
+      attendance && attendance.value === "Regretfully declining"
     ){
 
       thankYouMessage.innerHTML =
