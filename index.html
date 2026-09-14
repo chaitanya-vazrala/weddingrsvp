@@ -1386,6 +1386,132 @@ input:checked
 
 
 /* =========================================================
+   DUPLICATE RSVP CONFIRMATION MODAL
+========================================================= */
+
+body.modal-open{
+  overflow:hidden;
+}
+
+.dup-modal-overlay{
+  position:fixed;
+  inset:0;
+  z-index:99999;
+  background:rgba(35,20,15,.7);
+  backdrop-filter:blur(5px);
+  -webkit-backdrop-filter:blur(5px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  animation:dupFadeIn .25s ease-out;
+}
+
+@keyframes dupFadeIn{
+  from{opacity:0;}
+  to{opacity:1;}
+}
+
+.dup-modal-box{
+  background:var(--paper,#fffaf1);
+  border:1px solid rgba(199,154,77,.45);
+  border-radius:18px;
+  box-shadow:0 24px 60px rgba(72,34,25,.38);
+  max-width:460px;
+  width:100%;
+  padding:32px 24px;
+  text-align:center;
+  position:relative;
+  animation:dupScaleIn .25s ease-out;
+}
+
+@keyframes dupScaleIn{
+  from{transform:scale(.93);opacity:0;}
+  to{transform:scale(1);opacity:1;}
+}
+
+.dup-modal-icon{
+  color:var(--gold,#c79a4d);
+  font-size:22px;
+  margin-bottom:12px;
+  letter-spacing:3px;
+}
+
+.dup-modal-title{
+  margin:0 0 14px;
+  color:var(--maroon,#963d49);
+  font-family:Georgia,serif;
+  font-size:26px;
+  font-weight:normal;
+}
+
+.dup-modal-desc{
+  margin:0 0 10px;
+  color:#4d4037;
+  font-size:15px;
+  line-height:1.6;
+}
+
+.dup-modal-desc strong{
+  color:var(--maroon-dark,#762e38);
+}
+
+.dup-modal-subdesc{
+  margin:0 0 24px;
+  color:#715c51;
+  font-size:13.5px;
+  line-height:1.6;
+}
+
+.dup-modal-actions{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.dup-btn-primary{
+  width:100%;
+  min-height:50px;
+  border:0;
+  border-radius:28px;
+  cursor:pointer;
+  background:linear-gradient(135deg,#aa4b56,#7d303a);
+  color:white;
+  font:700 12px Arial,sans-serif;
+  letter-spacing:2px;
+  box-shadow:0 8px 20px rgba(117,43,52,.25);
+  transition:transform .2s ease,opacity .2s ease;
+}
+
+.dup-btn-primary:hover{
+  transform:translateY(-2px);
+}
+
+.dup-btn-primary:disabled{
+  opacity:.65;
+  cursor:not-allowed;
+  transform:none;
+}
+
+.dup-btn-secondary{
+  width:100%;
+  min-height:46px;
+  border:1px solid rgba(150,61,73,.35);
+  border-radius:28px;
+  cursor:pointer;
+  background:transparent;
+  color:var(--maroon,#963d49);
+  font:600 12px Arial,sans-serif;
+  letter-spacing:1.5px;
+  transition:background-color .2s ease,color .2s ease;
+}
+
+.dup-btn-secondary:hover{
+  background:rgba(150,61,73,.08);
+}
+
+
+/* =========================================================
    BACK TO TOP
 ========================================================= */
 
@@ -2763,6 +2889,25 @@ footer{
 
   </div>
 
+
+  <!-- DUPLICATE RSVP CONFIRMATION MODAL -->
+  <div id="duplicateModal" class="dup-modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="dupModalTitle">
+    <div class="dup-modal-box">
+      <div class="dup-modal-icon">✦ &nbsp; ❀ &nbsp; ✦</div>
+      <h3 id="dupModalTitle" class="dup-modal-title">RSVP Already Received</h3>
+      <p class="dup-modal-desc">
+        We found an existing RSVP for <strong id="dupGuestInfo"></strong>.
+      </p>
+      <p class="dup-modal-subdesc">
+        Would you like to update your previous response with your newly selected details?
+      </p>
+      <div class="dup-modal-actions">
+        <button type="button" id="dupUpdateBtn" class="dup-btn-primary">YES, UPDATE MY RSVP</button>
+        <button type="button" id="dupCancelBtn" class="dup-btn-secondary">KEEP PREVIOUS / EDIT</button>
+      </div>
+    </div>
+  </div>
+
 </section>
 
 
@@ -3098,6 +3243,47 @@ document.getElementById("rsvpFormContent");
 const thankYouMessage =
 document.getElementById("thankYouMessage");
 
+const duplicateModal =
+document.getElementById("duplicateModal");
+
+const dupGuestInfo =
+document.getElementById("dupGuestInfo");
+
+const dupUpdateBtn =
+document.getElementById("dupUpdateBtn");
+
+const dupCancelBtn =
+document.getElementById("dupCancelBtn");
+
+if (dupCancelBtn && duplicateModal) {
+  dupCancelBtn.addEventListener("click", function() {
+    duplicateModal.style.display = "none";
+    document.body.classList.remove("modal-open");
+    submitButton.disabled = false;
+    submitButton.textContent = "SEND MY RSVP";
+  });
+}
+
+if (duplicateModal) {
+  duplicateModal.addEventListener("click", function(e) {
+    if (e.target === duplicateModal) {
+      duplicateModal.style.display = "none";
+      document.body.classList.remove("modal-open");
+      submitButton.disabled = false;
+      submitButton.textContent = "SEND MY RSVP";
+    }
+  });
+
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape" && duplicateModal.style.display === "flex") {
+      duplicateModal.style.display = "none";
+      document.body.classList.remove("modal-open");
+      submitButton.disabled = false;
+      submitButton.textContent = "SEND MY RSVP";
+    }
+  });
+}
+
 
 const attendanceInputs =
 document.querySelectorAll(
@@ -3218,7 +3404,7 @@ rsvpForm.addEventListener(
 
         document
         .getElementById("eventsGroup")
-        .scrollIntoView({
+        ?.scrollIntoView({
           behavior:"smooth",
           block:"center"
         });
@@ -3238,74 +3424,67 @@ rsvpForm.addEventListener(
 
     }
 
+    await executeSubmission(false);
 
-    submitButton.disabled =
-    true;
-
-    submitButton.textContent =
-    "SENDING...";
+  }
+);
 
 
-    try{
+async function executeSubmission(isUpdate){
 
+  if(isUpdate){
+    if (dupUpdateBtn) {
+      dupUpdateBtn.disabled = true;
+      dupUpdateBtn.textContent = "UPDATING...";
+    }
+  } else {
+    submitButton.disabled = true;
+    submitButton.textContent = "SENDING...";
+  }
 
-      const data =
-      new FormData(rsvpForm);
+  try{
 
+    const attendance =
+    document.querySelector(
+      'input[name="Will you be joining us"]:checked'
+    );
 
-      const guestName =
-      document
-      .getElementById("guestName")
-      .value
-      .trim();
+    const guestName =
+    document
+    .getElementById("guestName")
+    .value
+    .trim();
 
+    const guestEmail =
+    document
+    .getElementById("guestEmail")
+    ?.value
+    ?.trim() || "";
 
-      const guestEmail =
-      document
-      .getElementById("guestEmail")
-      ?.value
-      ?.trim() || "";
+    const selectedEvents = Array.from(document.querySelectorAll('input[name="Events attending"]:checked')).map(el => el.value);
+    const guestCountValue = document.getElementById("guestCount")?.value || "1";
 
+    const gsPayload = {
+      name: guestName,
+      email: guestEmail,
+      attendance: attendance.value === "Joyfully accepting" ? "Yes" : "No",
+      guests: attendance.value === "Joyfully accepting" ? guestCountValue : "0",
+      sangeeth: selectedEvents.some(v => v.includes("Sangeeth")) ? "Yes" : "No",
+      haldi: selectedEvents.some(v => v.includes("Haldi")) ? "Yes" : "No",
+      wedding: selectedEvents.some(v => v.includes("Wedding")) ? "Yes" : "No",
+      message: document.getElementById("message")?.value || "",
+      allowUpdate: !!isUpdate,
+      submittedAt: new Date().toISOString()
+    };
 
-      const selectedEvents = Array.from(document.querySelectorAll('input[name="Events attending"]:checked')).map(el => el.value);
-      const guestCountValue = document.getElementById("guestCount")?.value || "1";
+    const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwkLjDytQyphxTbLS7e-yhslMOshoYFWiKXrPcOvvNxGaYOZ_970a1rGgqTaK-FsDK9/exec";
 
-      const gsPayload = {
-        name: guestName,
-        email: guestEmail,
-        attendance: attendance.value === "Joyfully accepting" ? "Yes" : "No",
-        guests: attendance.value === "Joyfully accepting" ? guestCountValue : "0",
-        sangeeth: selectedEvents.some(v => v.includes("Sangeeth")) ? "Yes" : "No",
-        haldi: selectedEvents.some(v => v.includes("Haldi")) ? "Yes" : "No",
-        wedding: selectedEvents.some(v => v.includes("Wedding")) ? "Yes" : "No",
-        message: document.getElementById("message")?.value || "",
-        submittedAt: new Date().toISOString()
-      };
+    let gsResult = null;
+    let gsFetchError = null;
 
-
-      const netlifyFetch = fetch(
-        "/",
-        {
-
-          method:"POST",
-
-          headers:{
-            "Content-Type":
-            "application/x-www-form-urlencoded"
-          },
-
-          body:
-            encodeFormData(data)
-
-        }
-      );
-
-
-      let googleSheetsFetch = Promise.resolve({ ok: true, status: 200 });
-      const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwkLjDytQyphxTbLS7e-yhslMOshoYFWiKXrPcOvvNxGaYOZ_970a1rGgqTaK-FsDK9/exec";
-
-      if (GOOGLE_APPS_SCRIPT_URL && !GOOGLE_APPS_SCRIPT_URL.includes("PASTE_")) {
-        googleSheetsFetch = fetch(GOOGLE_APPS_SCRIPT_URL, {
+    if (GOOGLE_APPS_SCRIPT_URL && !GOOGLE_APPS_SCRIPT_URL.includes("PASTE_")) {
+      try {
+        const gsRes = await fetch(GOOGLE_APPS_SCRIPT_URL, {
           method: "POST",
           mode: "cors",
           headers: {
@@ -3313,100 +3492,142 @@ rsvpForm.addEventListener(
           },
           body: JSON.stringify(gsPayload)
         });
+        if (gsRes.ok) {
+          gsResult = await gsRes.json();
+        }
+      } catch (err) {
+        gsFetchError = err;
+        console.warn("Google Apps Script fetch error:", err);
       }
+    }
 
+    // Duplicate detected and user hasn't yet confirmed overwrite
+    if (gsResult && gsResult.duplicate && !isUpdate) {
+      submitButton.disabled = false;
+      submitButton.textContent = "SEND MY RSVP";
 
-      let eitherSucceeded = false;
-      await Promise.allSettled([netlifyFetch, googleSheetsFetch]).then((results) => {
-        results.forEach((result) => {
-          if (result.status === "fulfilled" && (result.value.ok || result.value.status === 200)) {
-            eitherSucceeded = true;
-          }
-        });
-      });
-
-
-      if (!eitherSucceeded) {
-        throw new Error("Form submission couldn't be confirmed on any service.");
+      if (dupGuestInfo) {
+        dupGuestInfo.textContent = guestName + " (" + guestEmail + ")";
       }
-
-
-      if(
-        attendance.value ===
-        "Regretfully declining"
-      ){
-
-        thankYouMessage.innerHTML =
-
-          "Thank you, " +
-          guestName +
-          ".<br><br>" +
-          "We'll miss celebrating with you, " +
-          "but we're grateful for your love and wishes.";
-
+      if (duplicateModal) {
+        duplicateModal.style.display = "flex";
+        document.body.classList.add("modal-open");
+        if (dupUpdateBtn) {
+          dupUpdateBtn.disabled = false;
+          dupUpdateBtn.textContent = "YES, UPDATE MY RSVP";
+          dupUpdateBtn.onclick = function() {
+            executeSubmission(true);
+          };
+        }
       }
+      return;
+    }
 
-      else{
+    // Close duplicate modal if open
+    if (duplicateModal) {
+      duplicateModal.style.display = "none";
+      document.body.classList.remove("modal-open");
+    }
 
-        thankYouMessage.innerHTML =
+    // Submit to Netlify
+    const data = new FormData(rsvpForm);
+    if (isUpdate) {
+      data.append("Updated RSVP", "Yes");
+    }
 
-          "Thank you, " +
-          guestName +
-          "!<br><br>" +
-          "Your RSVP has been received. " +
-          "We can't wait to celebrate with you!";
-
+    let netlifySuccess = false;
+    try {
+      const netlifyRes = await fetch(
+        "/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body: encodeFormData(data)
+        }
+      );
+      if (netlifyRes.ok || netlifyRes.status === 200) {
+        netlifySuccess = true;
       }
+    } catch (err) {
+      console.warn("Netlify fetch error:", err);
+    }
 
+    const gsSuccess = gsResult && gsResult.success;
+    if (!gsSuccess && !netlifySuccess) {
+      throw new Error(gsFetchError || "Form submission couldn't be confirmed on any service.");
+    }
 
-      rsvpFormContent.style.display =
-      "none";
+    if(
+      attendance.value ===
+      "Regretfully declining"
+    ){
 
-      thankYou.style.display =
-      "block";
-
-
-      thankYou.scrollIntoView({
-
-        behavior:"smooth",
-
-        block:"center"
-
-      });
-
+      thankYouMessage.innerHTML =
+        "Thank you, " +
+        guestName +
+        ".<br><br>" +
+        (isUpdate ? "Your RSVP response has been updated to declining.<br>" : "") +
+        "We'll miss celebrating with you, " +
+        "but we're grateful for your love and wishes.";
 
     }
 
-    catch(error){
+    else{
 
+      thankYouMessage.innerHTML =
+        "Thank you, " +
+        guestName +
+        "!<br><br>" +
+        (isUpdate ? "Your RSVP has been successfully updated.<br>" : "Your RSVP has been received.<br>") +
+        "We can't wait to celebrate with you!";
 
-      console.error(error);
+    }
 
+    rsvpFormContent.style.display =
+    "none";
 
-      formError.textContent =
-      "We couldn't send your RSVP. Please check your connection or use the Google Form instead.";
+    thankYou.style.display =
+    "block";
 
-      formError.style.display =
-      "block";
+    thankYou.scrollIntoView({
+      behavior:"smooth",
+      block:"center"
+    });
 
-      const fallback = document.getElementById("rsvpFallback");
-      if (fallback) {
-        fallback.style.display = "block";
-        fallback.scrollIntoView({ behavior: "smooth" });
-      }
+  }
 
+  catch(error){
 
-      submitButton.disabled =
-      false;
+    console.error(error);
 
-      submitButton.textContent =
-      "SEND MY RSVP";
+    formError.textContent =
+    "We couldn't send your RSVP. Please check your connection or use the Google Form instead.";
 
+    formError.style.display =
+    "block";
 
+    const fallback = document.getElementById("rsvpFallback");
+    if (fallback) {
+      fallback.style.display = "block";
+      fallback.scrollIntoView({ behavior: "smooth" });
+    }
+
+    submitButton.disabled =
+    false;
+
+    submitButton.textContent =
+    "SEND MY RSVP";
+
+    if (dupUpdateBtn) {
+      dupUpdateBtn.disabled = false;
+      dupUpdateBtn.textContent = "YES, UPDATE MY RSVP";
     }
 
   }
-);
+
+}
 
 </script>
 

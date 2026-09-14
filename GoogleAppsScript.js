@@ -6,13 +6,9 @@
  * 2. Click on "Extensions" -> "Apps Script".
  * 3. Delete any default code in Editor and paste this entire file.
  * 4. Under script settings or deployment:
- *    - Click "Deploy" (top right) -> "New deployment".
- *    - Click "Select type" (gear icon) -> select "Web app".
- *    - Description: "RSVP API and Automatic Reminders"
- *    - Execute as: "Me" (your Google account)
- *    - Who has access: "Anyone"
- *    - Click "Deploy".
- *    - Copy the generated "Web app URL" (ending in /exec) and update GOOGLE_APPS_SCRIPT_URL in index.html.
+ *    - For existing deployments: Click "Deploy" (top right) -> "Manage deployments" -> Click the edit pencil icon -> Version: select "New version" -> Click "Deploy".
+ *    - For new deployments: Click "Deploy" (top right) -> "New deployment" -> Select "Web app", Description: "RSVP API with Duplicate Validation", Execute as: "Me", Who has access: "Anyone" -> Click "Deploy".
+ *    - Copy the generated "Web app URL" (ending in /exec) and update GOOGLE_APPS_SCRIPT_URL in index.html and wedding.html.
  * 5. Set up the daily automatic reminder trigger:
  *    - In Apps Script, click the clock icon "Triggers" on the left menu.
  *    - Click "+ Add Trigger" (bottom right).
@@ -76,33 +72,94 @@ const EVENT_DATES = {
 };
 
 /**
- * GET Request handler (for status testing and health checks)
+ * GET Request handler (for status testing, health checks, and duplicate verification)
  */
 function doGet(e) {
+  try {
+    const params = e && e.parameter ? e.parameter : {};
+    if (params.action === "check" && params.name && params.email) {
+      const sheet = getOrCreateRSVPSheet();
+      const data = sheet.getDataRange().getValues();
+      const qName = params.name.toString().trim().toLowerCase();
+      const qEmail = params.email.toString().trim().toLowerCase();
+      let exists = false;
+      for (let i = data.length - 1; i >= 1; i--) {
+        const rowName = (data[i][1] || "").toString().trim().toLowerCase();
+        const rowEmail = (data[i][2] || "").toString().trim().toLowerCase();
+        if (rowName === qName && rowEmail === qEmail && qName.length > 0 && qEmail.length > 0) {
+          exists = true;
+          break;
+        }
+      }
+      return ContentService
+        .createTextOutput(JSON.stringify({ exists: exists }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  } catch (err) {
+    console.error("Error in doGet: " + err.toString());
+  }
+
   return ContentService
     .createTextOutput("Chaitanya & Mounisha Wedding RSVP web app is active.")
     .setMimeType(ContentService.MimeType.TEXT);
 }
 
 /**
- * POST Request handler (receives form submissions)
+ * POST Request handler (receives form submissions and handles duplicate validation)
  */
 function doPost(e) {
   try {
     const rawData = e && e.postData && e.postData.contents ? e.postData.contents : "{}";
     const payload = JSON.parse(rawData);
 
-    if (!payload.name) {
+    const guestName = (payload.name || "").toString().trim();
+    const guestEmail = (payload.email || "").toString().trim();
+
+    if (!guestName) {
       return ContentService
         .createTextOutput(JSON.stringify({ success: false, error: "Name is required." }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    if (!guestEmail) {
+      return ContentService
+        .createTextOutput(JSON.stringify({ success: false, error: "Email is required." }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     const sheet = getOrCreateRSVPSheet();
-    
+    const data = sheet.getDataRange().getValues();
+    const normName = guestName.toLowerCase();
+    const normEmail = guestEmail.toLowerCase();
+    const allowUpdate = payload.allowUpdate === true || payload.allowUpdate === "true";
+
+    // Duplicate check: Match both Name and Email (case-insensitive, trimmed)
+    let existingRowIndex = -1; // 1-based index in sheet
+    for (let i = data.length - 1; i >= 1; i--) {
+      const rowName = (data[i][1] || "").toString().trim().toLowerCase();
+      const rowEmail = (data[i][2] || "").toString().trim().toLowerCase();
+      if (rowName === normName && rowEmail === normEmail && normName.length > 0 && normEmail.length > 0) {
+        existingRowIndex = i + 1;
+        break;
+      }
+    }
+
+    // If duplicate found and user has not confirmed to overwrite/update
+    if (existingRowIndex > 0 && !allowUpdate) {
+      return ContentService
+        .createTextOutput(JSON.stringify({
+          success: false,
+          duplicate: true,
+          message: "An RSVP with this name and email already exists.",
+          existingGuest: {
+            name: data[existingRowIndex - 1][1],
+            email: data[existingRowIndex - 1][2]
+          }
+        }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     const timestamp = new Date();
-    const guestName = payload.name || "";
-    const guestEmail = payload.email || "";
     const attendance = payload.attendance || "";
     const guestsCount = payload.guests || "0";
     const attendingSangeeth = payload.sangeeth || "No";
@@ -110,8 +167,56 @@ function doPost(e) {
     const attendingWedding = payload.wedding || "No";
     const message = payload.message || "";
 
-    // Header structure: 
-    // Timestamp | Name | Email | Attendance | Guests Count | Sangeeth | Haldi | Wedding | Message | Sangeeth 4D | Sangeeth 2D | Haldi 4D | Haldi 2D | Wedding 4D | Wedding 2D
+    // If duplicate confirmed: Update existing row in place
+    if (existingRowIndex > 0 && allowUpdate) {
+      // Header structure: 
+      // Timestamp (1) | Name (2) | Email (3) | Attendance (4) | Guests Count (5) | Sangeeth (6) | Haldi (7) | Wedding (8) | Message (9)
+      sheet.getRange(existingRowIndex, 1, 1, 9).setValues([[
+        timestamp,
+        guestName,
+        guestEmail,
+        attendance,
+        guestsCount,
+        attendingSangeeth,
+        attendingHaldi,
+        attendingWedding,
+        message
+      ]]);
+
+      // Update reminder statuses according to new attendance
+      if (attendance !== "Yes" && !attendance.toLowerCase().includes("accept")) {
+        // If declining, cancel all future event reminders
+        sheet.getRange(existingRowIndex, 10, 1, 6).setValues([["Cancelled", "Cancelled", "Cancelled", "Cancelled", "Cancelled", "Cancelled"]]);
+      } else {
+        // Reset reminder status for newly selected events or clear if unselected
+        const remValues = sheet.getRange(existingRowIndex, 10, 1, 6).getValues()[0];
+        const newRem = [
+          attendingSangeeth === "Yes" ? (remValues[0] === "Cancelled" ? "" : remValues[0]) : "N/A",
+          attendingSangeeth === "Yes" ? (remValues[1] === "Cancelled" ? "" : remValues[1]) : "N/A",
+          attendingHaldi === "Yes" ? (remValues[2] === "Cancelled" ? "" : remValues[2]) : "N/A",
+          attendingHaldi === "Yes" ? (remValues[3] === "Cancelled" ? "" : remValues[3]) : "N/A",
+          attendingWedding === "Yes" ? (remValues[4] === "Cancelled" ? "" : remValues[4]) : "N/A",
+          attendingWedding === "Yes" ? (remValues[5] === "Cancelled" ? "" : remValues[5]) : "N/A"
+        ];
+        sheet.getRange(existingRowIndex, 10, 1, 6).setValues([newRem]);
+      }
+
+      // Send update notification email to hosts
+      sendHostNotificationEmail(payload, true /* isUpdate */);
+
+      // Send update confirmation email to guest
+      sendGuestConfirmationEmail(payload, true /* isUpdate */);
+
+      return ContentService
+        .createTextOutput(JSON.stringify({
+          success: true,
+          updated: true,
+          message: "RSVP updated successfully."
+        }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // New submission: Append new row
     const rowData = [
       timestamp,
       guestName,
@@ -133,13 +238,17 @@ function doPost(e) {
     sheet.appendRow(rowData);
 
     // Send instant notification email to hosts
-    sendHostNotificationEmail(payload);
+    sendHostNotificationEmail(payload, false /* isUpdate */);
 
     // Send instant confirmation email to guest
-    sendGuestConfirmationEmail(payload);
+    sendGuestConfirmationEmail(payload, false /* isUpdate */);
 
     return ContentService
-      .createTextOutput(JSON.stringify({ success: true, message: "RSVP recorded successfully." }))
+      .createTextOutput(JSON.stringify({
+        success: true,
+        updated: false,
+        message: "RSVP recorded successfully."
+      }))
       .setMimeType(ContentService.MimeType.JSON);
 
   } catch (error) {
@@ -192,7 +301,7 @@ function getOrCreateRSVPSheet() {
 /**
  * Sends a notification email to hosts when a response is entered
  */
-function sendHostNotificationEmail(payload) {
+function sendHostNotificationEmail(payload, isUpdate) {
   const name = payload.name;
   const email = payload.email || "Not Provided";
   const attendance = payload.attendance;
@@ -202,12 +311,20 @@ function sendHostNotificationEmail(payload) {
   const wedding = payload.wedding || "No";
   const message = payload.message || "None";
 
-  const subject = "🎉 New Wedding RSVP from " + name + " (" + attendance + ")";
+  const subject = (isUpdate ? "🔄 Updated Wedding RSVP from " : "🎉 New Wedding RSVP from ") + name + " (" + attendance + ")";
 
   let htmlBody = `
     <div style="font-family: Georgia, serif; max-width: 600px; margin: auto; padding: 25px; border: 1px solid #e2cfb8; background-color: #fffcf8; color: #4d4037;">
-      <h2 style="color: #963d49; text-align: center; border-bottom: 1px solid #e2cfb8; padding-bottom: 15px; font-weight: normal; margin-top: 0;">New RSVP Received</h2>
-      <p style="text-align: center; font-size: 15px; font-style: italic; color: #7a6657;">Someone has shared their response for your beautiful beginning!</p>
+      <h2 style="color: #963d49; text-align: center; border-bottom: 1px solid #e2cfb8; padding-bottom: 15px; font-weight: normal; margin-top: 0;">
+        ${isUpdate ? "RSVP Updated" : "New RSVP Received"}
+      </h2>
+      <p style="text-align: center; font-size: 15px; font-style: italic; color: #7a6657;">
+        ${isUpdate ? "A guest has updated their previous RSVP response!" : "Someone has shared their response for your beautiful beginning!"}
+      </p>
+      ${isUpdate ? `
+      <div style="background-color: #fef7ec; border-left: 4px solid #c79a4d; padding: 12px 16px; margin: 15px 0; font-size: 13.5px; color: #6a5348; border-radius: 4px;">
+        <strong>Notice:</strong> This guest previously submitted an RSVP. Their entry in the spreadsheet has been updated with these details.
+      </div>` : ''}
       
       <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
         <tr style="border-bottom: 1px solid #f2e7db;">
@@ -270,7 +387,7 @@ function sendHostNotificationEmail(payload) {
 /**
  * Sends a confirmation email to the guest upon successful RSVP submission
  */
-function sendGuestConfirmationEmail(payload) {
+function sendGuestConfirmationEmail(payload, isUpdate) {
   const name = payload.name;
   const email = payload.email ? payload.email.toString().trim() : "";
   const attendance = payload.attendance;
@@ -287,8 +404,8 @@ function sendGuestConfirmationEmail(payload) {
 
   const isAccepting = (attendance === "Yes" || attendance.toLowerCase().includes("accept"));
   const subject = isAccepting 
-    ? "🎉 RSVP Confirmed! Chaitanya & Mounisha Wedding"
-    : "💌 Thank You for your Response - Chaitanya & Mounisha Wedding";
+    ? (isUpdate ? "🔄 RSVP Updated! Chaitanya & Mounisha Wedding" : "🎉 RSVP Confirmed! Chaitanya & Mounisha Wedding")
+    : (isUpdate ? "🔄 RSVP Updated - Chaitanya & Mounisha Wedding" : "💌 Thank You for your Response - Chaitanya & Mounisha Wedding");
 
   let htmlBody = `
     <div style="font-family: Georgia, serif; max-width: 580px; margin: auto; padding: 35px 25px; border: 1px solid #dfc9a4; background-color: #fffdf9; color: #4d4037; line-height: 1.8; border-radius: 8px;">
@@ -300,19 +417,19 @@ function sendGuestConfirmationEmail(payload) {
       
       <!-- Main Header -->
       <h2 style="color: #963d49; text-align: center; font-weight: normal; margin: 0 0 10px; font-size: 26px;">
-        Hello ${name},
+        Hello ${name}${isUpdate ? " (RSVP Updated)" : ""},
       </h2>
   `;
 
   if (isAccepting) {
     htmlBody += `
       <p style="text-align: center; font-size: 15px; color: #725d50; margin: 0 0 30px;">
-        Friendly confirmation that we have received your RSVP! We can't wait to celebrate these beautiful days of love and togetherness with you.
+        ${isUpdate ? "Friendly confirmation that your wedding RSVP details have been successfully updated! We can't wait to celebrate these beautiful days of love and togetherness with you." : "Friendly confirmation that we have received your RSVP! We can't wait to celebrate these beautiful days of love and togetherness with you."}
       </p>
       
       <div style="background-color: #fffbfa; border: 1px dashed #ddc2ad; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(117,43,52,0.02);">
         <span style="font-size: 11px; color: #963d49; letter-spacing: 2px; font-weight: bold; display: block; margin-bottom: 6px;">
-          YOUR RSVP DETAILS
+          YOUR ${isUpdate ? "UPDATED " : ""}RSVP DETAILS
         </span>
         <p style="color: #3d2f26; font-size: 14px; margin: 0; line-height: 1.8;">
           <strong>Attendance:</strong> Joyfully Accepting<br>
@@ -327,14 +444,14 @@ function sendGuestConfirmationEmail(payload) {
       </div>
 
       <p style="font-size: 13.5px; color: #6a5348; text-align: center; margin-bottom: 25px; line-height: 1.6; background-color: #f7ede2; padding: 12px; border-radius: 6px;">
-        <strong>Need to change your response?</strong><br>
+        <strong>Need to change your response again?</strong><br>
         No worries! If your plans change, simply visit our wedding website at <a href="https://cheywedsmounisha.com" target="_blank" style="color: #963d49; text-decoration: underline; font-weight: bold;">cheywedsmounisha.com</a> and re-submit the RSVP form with your updated details, or respond to this email and let us know!
       </p>
     `;
   } else {
     htmlBody += `
       <p style="text-align: center; font-size: 15px; color: #725d50; margin: 0 0 30px;">
-        Thank you for sharing your response. We will miss celebrating with you, but we are incredibly grateful for your love and warm wishes from afar!
+        ${isUpdate ? "Your RSVP response has been updated to declining. We will miss celebrating with you, but we are incredibly grateful for your love and warm wishes from afar!" : "Thank you for sharing your response. We will miss celebrating with you, but we are incredibly grateful for your love and warm wishes from afar!"}
       </p>
 
       <p style="font-size: 13.5px; color: #6a5348; text-align: center; margin-bottom: 25px; line-height: 1.6; background-color: #f7ede2; padding: 12px; border-radius: 6px;">
