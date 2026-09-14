@@ -3150,9 +3150,8 @@ attendanceInputs.forEach(
           guestCount.required = true;
 
           if (guestCountGroup) guestCountGroup.style.display = "block";
-          if (eventsGroup) eventsGroup.style.display = "block";
 
-          // Ensure Wedding is checked when accepts section is shown
+          // Ensure Wedding is checked when accepts
           document.querySelectorAll('input[name="Events attending"]').forEach(function(el) {
             el.checked = true;
           });
@@ -3165,13 +3164,12 @@ attendanceInputs.forEach(
 
           guestCount.value = "1";
 
-          // Uncheck all events if declining
+          // Uncheck events if declining
           document.querySelectorAll('input[name="Events attending"]').forEach(function(el) {
             el.checked = false;
           });
 
           if (guestCountGroup) guestCountGroup.style.display = "none";
-          if (eventsGroup) eventsGroup.style.display = "none";
 
         }
 
@@ -3216,39 +3214,6 @@ rsvpForm.addEventListener(
       "block";
 
       return;
-
-    }
-
-
-    if(
-      attendance.value ===
-      "Joyfully accepting"
-    ){
-
-      const events =
-      document.querySelectorAll(
-        'input[name="Events attending"]:checked'
-      );
-
-
-      if(events.length === 0){
-
-        formError.textContent =
-        "Please select at least one event you'll be attending.";
-
-        formError.style.display =
-        "block";
-
-        document
-        .getElementById("eventsGroup")
-        ?.scrollIntoView({
-          behavior:"smooth",
-          block:"center"
-        });
-
-        return;
-
-      }
 
     }
 
@@ -3391,17 +3356,22 @@ async function executeSubmission(isUpdate){
 
   try{
 
-    const selectedEvents = Array.from(document.querySelectorAll('input[name="Events attending"]:checked')).map(el => el.value);
+    const isAccepting = attendance ? (attendance.value === "Joyfully accepting") : false;
     const guestCountValue = document.getElementById("guestCount")?.value || "1";
+
+    // Keep hidden wedding checkbox in sync for FormData
+    document.querySelectorAll('input[name="Events attending"]').forEach(function(el) {
+      el.checked = isAccepting;
+    });
 
     const gsPayload = {
       name: guestName,
       email: guestEmail,
-      attendance: attendance ? (attendance.value === "Joyfully accepting" ? "Yes" : "No") : "Yes",
-      guests: attendance && attendance.value === "Joyfully accepting" ? guestCountValue : "0",
-      sangeeth: selectedEvents.some(v => v.includes("Sangeeth")) ? "Yes" : "No",
-      haldi: selectedEvents.some(v => v.includes("Haldi")) ? "Yes" : "No",
-      wedding: selectedEvents.some(v => v.includes("Wedding")) ? "Yes" : "No",
+      attendance: isAccepting ? "Yes" : "No",
+      guests: isAccepting ? guestCountValue : "0",
+      sangeeth: "No",
+      haldi: "No",
+      wedding: isAccepting ? "Yes" : "No",
       message: document.getElementById("message")?.value || "",
       allowUpdate: !!isUpdate,
       submittedAt: new Date().toISOString()
