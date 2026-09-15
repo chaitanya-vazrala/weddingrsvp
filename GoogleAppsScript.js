@@ -5,18 +5,30 @@
  * 1. Open your Google Sheet: https://docs.google.com/spreadsheets/d/1K7Z-zgcxGW53QsanV0V6W7ZLq16t-xIrs90vOfWf3G0/edit
  * 2. Click on "Extensions" -> "Apps Script".
  * 3. Delete any default code in Editor and paste this entire file.
- * 4. Under script settings or deployment:
- *    - For existing deployments: Click "Deploy" (top right) -> "Manage deployments" -> Click the edit pencil icon -> Version: select "New version" -> Click "Deploy".
- *    - For new deployments: Click "Deploy" (top right) -> "New deployment" -> Select "Web app", Description: "RSVP API with Duplicate Validation", Execute as: "Me", Who has access: "Anyone" -> Click "Deploy".
- *    - Copy the generated "Web app URL" (ending in /exec) and update GOOGLE_APPS_SCRIPT_URL in index.html and wedding.html.
- * 5. Set up the daily automatic reminder trigger:
+ * 4. ONE-TIME EMAIL AUTHORIZATION (IMPORTANT):
+ *    - In the Apps Script toolbar at the top, select "testSendEmail" from the function dropdown (next to "Run" and "Debug").
+ *    - Click "Run".
+ *    - Google will display an "Authorization required" popup:
+ *      a) Click "Review permissions".
+ *      b) Choose your Google account (cheyreddy30@gmail.com).
+ *      c) Click "Advanced" -> "Go to Untitled project (unsafe)".
+ *      d) Click "Allow".
+ *    - You will see "Execution completed" in the log, and an immediate test confirmation email will arrive in your Gmail!
+ * 5. Deploy / Update Web App:
+ *    - Click "Deploy" (top right) -> "Manage deployments".
+ *    - Click the edit pencil icon next to your active deployment.
+ *    - Version: select "New version".
+ *    - Execute as: "Me (cheyreddy30@gmail.com)".
+ *    - Who has access: "Anyone".
+ *    - Click "Deploy".
+ * 6. Set up the daily automatic reminder trigger:
  *    - In Apps Script, click the clock icon "Triggers" on the left menu.
  *    - Click "+ Add Trigger" (bottom right).
  *    - Choose function to run: "checkAndSendReminders"
  *    - Select event source: "Time-driven"
  *    - Select type of time based trigger: "Day timer"
  *    - Select time of day: "8 AM to 9 AM" (or any hour you prefer)
- *    - Click "Save" and authorize permissions.
+ *    - Click "Save".
  */
 
 // Global Configurations
@@ -71,12 +83,146 @@ const EVENT_DATES = {
   }
 };
 
+const REMINDER_CONFIG = {
+  Sangeeth: {
+    name: "Sangeeth Celebration",
+    time: "Friday, Oct 23rd @ 8:00 PM",
+    desc: "music, dance, laughter, and celebration",
+    dateFormatted: "Friday, October 23, 2026"
+  },
+  Haldi: {
+    name: "Haldi Ceremony",
+    time: "Saturday, Oct 24th (Afternoon)",
+    desc: "turmeric blessings, laughter, and bright beginnings",
+    dateFormatted: "Saturday, October 24, 2026"
+  },
+  Wedding: {
+    name: "Wedding Ceremony",
+    time: "Sunday, Oct 25th @ 9:45 AM",
+    desc: "sacred rituals, family blessings, and matching our beautiful forevers",
+    dateFormatted: "Sunday, October 25, 2026"
+  }
+};
+
+/**
+ * Robust Email Sender:
+ * 1. Requires plain-text body + HTML body (mandatory for Google Apps Script MailApp/GmailApp).
+ * 2. Attempts GmailApp.sendEmail first (saves directly to host's Sent folder for tracking).
+ * 3. Falls back to MailApp.sendEmail with explicit plain-text body parameter.
+ * 4. Sets sender display name to "Chaitanya & Mounisha" and replyTo to hosts.
+ */
+function sendEmailRobust(to, subject, plainText, htmlBody, replyTo) {
+  if (!to || !to.toString().trim()) {
+    console.warn("sendEmailRobust: Recipient email address is missing.");
+    return { success: false, error: "Recipient email is missing." };
+  }
+
+  const cleanTo = to.toString().trim();
+  const cleanReplyTo = replyTo || "cheyreddy30@gmail.com";
+  const senderName = "Chaitanya & Mounisha";
+  const textBody = (plainText && plainText.trim()) 
+    ? plainText.trim() 
+    : "Please open this email in an HTML-compatible email client to view your RSVP details.";
+
+  // Check remaining daily email quota
+  let quota = -1;
+  try {
+    quota = MailApp.getRemainingDailyQuota();
+    console.log("Remaining daily email quota: " + quota);
+    if (quota === 0) {
+      console.error("Daily email quota reached (0). Cannot send email to " + cleanTo);
+      return { success: false, error: "Daily email quota reached (0)." };
+    }
+  } catch(qErr) {
+    console.warn("Could not check email quota: " + qErr.toString());
+  }
+
+  // Attempt 1: GmailApp.sendEmail (appears in host's Gmail Sent folder)
+  try {
+    GmailApp.sendEmail(cleanTo, subject, textBody, {
+      htmlBody: htmlBody,
+      name: senderName,
+      replyTo: cleanReplyTo
+    });
+    console.log("Email sent successfully via GmailApp to: " + cleanTo);
+    return { success: true, service: "GmailApp", quotaRemaining: quota };
+  } catch(gmailErr) {
+    console.warn("GmailApp.sendEmail failed (" + gmailErr.toString() + "). Attempting MailApp fallback...");
+  }
+
+  // Attempt 2: MailApp.sendEmail (requires body parameter)
+  try {
+    MailApp.sendEmail({
+      to: cleanTo,
+      subject: subject,
+      body: textBody,
+      htmlBody: htmlBody,
+      name: senderName,
+      replyTo: cleanReplyTo
+    });
+    console.log("Email sent successfully via MailApp to: " + cleanTo);
+    return { success: true, service: "MailApp", quotaRemaining: quota };
+  } catch(mailErr) {
+    console.error("MailApp.sendEmail also failed for " + cleanTo + ": " + mailErr.toString());
+    return { success: false, error: mailErr.toString() };
+  }
+}
+
+/**
+ * Generates clean plain-text fallback content for guest confirmation
+ */
+function getGuestConfirmationPlainText(name, isAccepting, isUpdate, guests, sangeeth, haldi, wedding) {
+  if (isAccepting) {
+    let events = [];
+    if (sangeeth === "Yes") events.push("  - Sangeeth: Oct 23");
+    if (haldi === "Yes") events.push("  - Haldi: Oct 24");
+    if (wedding === "Yes") events.push("  - Wedding: Oct 25");
+    return `Hello ${name},\n\n` +
+      `Friendly confirmation that we have received your ${isUpdate ? "updated " : ""}wedding RSVP! We can't wait to celebrate these beautiful days of love and togetherness with you.\n\n` +
+      `YOUR RSVP DETAILS:\n` +
+      `- Attendance: Joyfully Accepting\n` +
+      `- Number of Guests: ${guests}\n` +
+      `- Events Selected:\n${events.join("\n")}\n\n` +
+      `Need to change your response again?\n` +
+      `Visit our website at https://cheywedsmounisha.com or reply directly to this email.\n\n` +
+      `With love & appreciation,\n` +
+      `Chaitanya & Mounisha`;
+  } else {
+    return `Hello ${name},\n\n` +
+      `Thank you for sharing your response. Your RSVP response has been ${isUpdate ? "updated to declining" : "received"}.\n\n` +
+      `We will miss celebrating with you, but we are incredibly grateful for your love and warm wishes from afar!\n\n` +
+      `If your plans change, you can update your response at https://cheywedsmounisha.com anytime or reply directly to this email.\n\n` +
+      `With love & appreciation,\n` +
+      `Chaitanya & Mounisha`;
+  }
+}
+
+/**
+ * Generates clean plain-text fallback content for host notification
+ */
+function getHostNotificationPlainText(name, email, attendance, guests, sangeeth, haldi, wedding, message, isUpdate) {
+  return `${isUpdate ? "RSVP Updated" : "New RSVP Received"}\n\n` +
+    `Guest Name: ${name}\n` +
+    `Email: ${email}\n` +
+    `Attendance: ${attendance}\n` +
+    (attendance === "Yes" || attendance.toLowerCase().indexOf("accept") !== -1 ?
+      `Number of Guests: ${guests}\n` +
+      `Events Attending:\n` +
+      `  - Sangeeth: ${sangeeth}\n` +
+      `  - Haldi: ${haldi}\n` +
+      `  - Wedding: ${wedding}\n` : "") +
+    `Message: "${message}"\n\n` +
+    `View RSVP Spreadsheet:\nhttps://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/edit`;
+}
+
 /**
  * GET Request handler (for status testing, health checks, and duplicate verification)
  */
 function doGet(e) {
   try {
     const params = e && e.parameter ? e.parameter : {};
+
+    // 1. Check duplicate: ?action=check&name=...&email=...
     if (params.action === "check" && params.name && params.email) {
       const sheet = getOrCreateRSVPSheet();
       const data = sheet.getDataRange().getValues();
@@ -93,6 +239,40 @@ function doGet(e) {
       }
       return ContentService
         .createTextOutput(JSON.stringify({ exists: exists }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 2. Diagnostics: ?action=diag
+    if (params.action === "diag") {
+      let quota = -1;
+      let emailError = null;
+      try {
+        quota = MailApp.getRemainingDailyQuota();
+      } catch (err) {
+        emailError = err.toString();
+      }
+      return ContentService
+        .createTextOutput(JSON.stringify({
+          status: "active",
+          emailQuotaRemaining: quota,
+          emailError: emailError,
+          timestamp: new Date().toISOString()
+        }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 3. Test email dispatch: ?action=test_email&to=recipient@example.com
+    if (params.action === "test_email" && params.to) {
+      const targetEmail = params.to.toString().trim();
+      const testResult = sendEmailRobust(
+        targetEmail,
+        "🧪 Wedding RSVP Test Email Delivery",
+        "Hello!\n\nThis is a test confirmation email from your Wedding RSVP web app.\nIf you received this, email delivery is functioning perfectly!\n\nWith love,\nChaitanya & Mounisha",
+        "<div style='font-family: Georgia, serif; max-width: 500px; padding: 25px; border: 1px solid #dfc9a4; background-color: #fffdf9; color: #4d4037; border-radius: 8px;'><h2 style='color: #963d49; text-align: center;'>Test Email Delivery</h2><p style='text-align: center;'>This is a verified test confirmation email from your Wedding RSVP web app.</p><p style='text-align: center; color: #46624d; font-weight: bold;'>If you see this in your inbox, email delivery is 100% working!</p></div>",
+        "cheyreddy30@gmail.com"
+      );
+      return ContentService
+        .createTextOutput(JSON.stringify(testResult))
         .setMimeType(ContentService.MimeType.JSON);
     }
   } catch (err) {
@@ -112,8 +292,8 @@ function doPost(e) {
     const rawData = e && e.postData && e.postData.contents ? e.postData.contents : "{}";
     const payload = JSON.parse(rawData);
 
-    const guestName = (payload.name || "").toString().trim();
-    const guestEmail = (payload.email || "").toString().trim();
+    const guestName = (payload.name || payload["Your name"] || "").toString().trim();
+    const guestEmail = (payload.email || payload["Your email"] || payload.guestEmail || "").toString().trim();
 
     if (!guestName) {
       return ContentService
@@ -160,7 +340,7 @@ function doPost(e) {
     }
 
     const timestamp = new Date();
-    const attendance = payload.attendance || "";
+    const attendance = (payload.attendance || "").toString();
     const guestsCount = payload.guests || "0";
     const attendingSangeeth = payload.sangeeth || "No";
     const attendingHaldi = payload.haldi || "No";
@@ -207,14 +387,14 @@ function doPost(e) {
         }
       }
 
-      // Send update notification email to hosts (safely)
+      // Send update notification email to hosts
       try {
         sendHostNotificationEmail(payload, true /* isUpdate */);
       } catch (hostErr) {
         console.warn("Host email warning: " + hostErr.toString());
       }
 
-      // Send update confirmation email to guest (safely)
+      // Send update confirmation email to guest
       try {
         sendGuestConfirmationEmail(payload, true /* isUpdate */);
       } catch (guestErr) {
@@ -251,14 +431,14 @@ function doPost(e) {
 
     sheet.appendRow(rowData);
 
-    // Send instant notification email to hosts (safely)
+    // Send instant notification email to hosts
     try {
       sendHostNotificationEmail(payload, false /* isUpdate */);
     } catch (hostErr) {
       console.warn("Host email warning: " + hostErr.toString());
     }
 
-    // Send instant confirmation email to guest (safely)
+    // Send instant confirmation email to guest
     try {
       sendGuestConfirmationEmail(payload, false /* isUpdate */);
     } catch (guestErr) {
@@ -274,7 +454,7 @@ function doPost(e) {
       .setMimeType(ContentService.MimeType.JSON);
 
   } catch (error) {
-    console.error("Error in doPost RSVP submission: " + error.toString());
+    console.error("Critical Error in doPost: " + error.toString());
     return ContentService
       .createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
@@ -282,7 +462,7 @@ function doPost(e) {
 }
 
 /**
- * Gets or creates the RSVP worksheet with appropriate column headers
+ * Creates or retrieves the RSVP sheet and enforces headers
  */
 function getOrCreateRSVPSheet() {
   const ss = getSS();
@@ -290,33 +470,35 @@ function getOrCreateRSVPSheet() {
 
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_NAME);
+  }
+
+  // Ensure header row exists
+  if (sheet.getLastRow() === 0) {
     const headers = [
       "Timestamp",
       "Name",
       "Email",
       "Attendance",
-      "Guests Count",
+      "Guests",
       "Sangeeth",
       "Haldi",
       "Wedding",
       "Message",
-      "Sangeeth 4D Sent",
-      "Sangeeth 2D Sent",
-      "Haldi 4D Sent",
-      "Haldi 2D Sent",
-      "Wedding 4D Sent",
-      "Wedding 2D Sent"
+      "Sangeeth 4D Reminder",
+      "Sangeeth 2D Reminder",
+      "Haldi 4D Reminder",
+      "Haldi 2D Reminder",
+      "Wedding 4D Reminder",
+      "Wedding 2D Reminder"
     ];
     sheet.appendRow(headers);
-    
-    // Style headers elegantly
     const headerRange = sheet.getRange(1, 1, 1, headers.length);
     headerRange.setFontWeight("bold");
-    headerRange.setBackground("#963d49");
-    headerRange.setFontColor("#ffffff");
-    headerRange.setHorizontalAlignment("center");
+    headerRange.setBackground("#f2e3d3");
+    headerRange.setFontColor("#5c4838");
     sheet.setFrozenRows(1);
   }
+
   return sheet;
 }
 
@@ -324,8 +506,8 @@ function getOrCreateRSVPSheet() {
  * Sends a notification email to hosts when a response is entered
  */
 function sendHostNotificationEmail(payload, isUpdate) {
-  const name = payload.name;
-  const email = payload.email || "Not Provided";
+  const name = (payload.name || payload["Your name"] || "Guest").toString().trim();
+  const email = (payload.email || payload["Your email"] || "Not Provided").toString().trim();
   const attendance = (payload.attendance || "").toString();
   const isAccepting = (attendance === "Yes" || attendance.toLowerCase().indexOf("accept") !== -1);
   const guests = payload.guests || "0";
@@ -335,6 +517,8 @@ function sendHostNotificationEmail(payload, isUpdate) {
   const message = payload.message || "None";
 
   const subject = (isUpdate ? "🔄 Updated Wedding RSVP from " : "🎉 New Wedding RSVP from ") + name + " (" + (attendance || "Submitted") + ")";
+
+  const plainText = getHostNotificationPlainText(name, email, attendance, guests, sangeeth, haldi, wedding, message, isUpdate);
 
   let htmlBody = `
     <div style="font-family: Georgia, serif; max-width: 600px; margin: auto; padding: 25px; border: 1px solid #e2cfb8; background-color: #fffcf8; color: #4d4037;">
@@ -396,11 +580,7 @@ function sendHostNotificationEmail(payload, isUpdate) {
 
   NOTIFICATION_EMAILS.forEach(function(emailAddress) {
     try {
-      MailApp.sendEmail({
-        to: emailAddress,
-        subject: subject,
-        htmlBody: htmlBody
-      });
+      sendEmailRobust(emailAddress, subject, plainText, htmlBody, email !== "Not Provided" ? email : undefined);
     } catch(err) {
       console.warn("Failed sending notification email to " + emailAddress + ": " + err.toString());
     }
@@ -411,24 +591,26 @@ function sendHostNotificationEmail(payload, isUpdate) {
  * Sends a confirmation email to the guest upon successful RSVP submission
  */
 function sendGuestConfirmationEmail(payload, isUpdate) {
-  const name = payload.name;
-  const email = payload.email ? payload.email.toString().trim() : "";
-  const attendance = payload.attendance;
+  const name = (payload.name || payload["Your name"] || "Guest").toString().trim();
+  const email = (payload.email || payload["Your email"] || payload.guestEmail || "").toString().trim();
+  const attendance = (payload.attendance || "").toString();
   const guests = payload.guests || "0";
   const sangeeth = payload.sangeeth || "No";
   const haldi = payload.haldi || "No";
   const wedding = payload.wedding || "No";
   const message = payload.message || "";
 
-  if (!email) {
-    console.log("No email address provided for guest: " + name + ". Group confirmation skipped.");
-    return;
+  if (!email || email.indexOf("@") === -1) {
+    console.log("No valid email address provided for guest: " + name + " (" + email + "). Confirmation skipped.");
+    return false;
   }
 
-  const isAccepting = (attendance === "Yes" || attendance.toLowerCase().includes("accept"));
+  const isAccepting = (attendance === "Yes" || attendance.toLowerCase().indexOf("accept") !== -1);
   const subject = isAccepting 
     ? (isUpdate ? "🔄 RSVP Updated! Chaitanya & Mounisha Wedding" : "🎉 RSVP Confirmed! Chaitanya & Mounisha Wedding")
     : (isUpdate ? "🔄 RSVP Updated - Chaitanya & Mounisha Wedding" : "💌 Thank You for your Response - Chaitanya & Mounisha Wedding");
+
+  const plainText = getGuestConfirmationPlainText(name, isAccepting, isUpdate, guests, sangeeth, haldi, wedding);
 
   let htmlBody = `
     <div style="font-family: Georgia, serif; max-width: 580px; margin: auto; padding: 35px 25px; border: 1px solid #dfc9a4; background-color: #fffdf9; color: #4d4037; line-height: 1.8; border-radius: 8px;">
@@ -498,15 +680,16 @@ function sendGuestConfirmationEmail(payload, isUpdate) {
   `;
 
   try {
-    MailApp.sendEmail({
-      to: email,
-      subject: subject,
-      htmlBody: htmlBody,
-      replyTo: "cheyreddy30@gmail.com" // Sets default reply route to hosts for changes
-    });
-    console.log("Successfully sent instant confirmation email to guest: " + email);
+    const result = sendEmailRobust(email, subject, plainText, htmlBody, "cheyreddy30@gmail.com");
+    if (result.success) {
+      console.log("Successfully sent instant confirmation email to guest: " + email + " via " + result.service);
+    } else {
+      console.error("Failed sending instant confirmation email to guest " + email + ": " + result.error);
+    }
+    return result.success;
   } catch(err) {
     console.error("Failed sending instant confirmation email to guest " + email + ": " + err.toString());
+    return false;
   }
 }
 
@@ -549,72 +732,63 @@ function checkAndSendReminders() {
 
     for (let i = 1; i < values.length; i++) {
       const row = values[i];
-      const name = row[COL_NAME];
-      const email = row[COL_EMAIL] ? row[COL_EMAIL].toString().trim() : "";
-      const attendance = row[COL_ATTENDANCE];
+      const rowIndex = i + 1;
+
+      const name = (row[COL_NAME] || "").toString().trim();
+      const email = (row[COL_EMAIL] || "").toString().trim();
+      const attendance = (row[COL_ATTENDANCE] || "").toString().trim();
       
-      // We only execute reminders for guests who joyfully accepted and have a valid email
-      if (!email || (attendance !== "Yes" && !attendance.toLowerCase().includes("accept"))) {
-        continue;
-      }
+      const attendingSangeeth = (row[COL_SANGEETH] || "").toString().trim();
+      const attendingHaldi = (row[COL_HALDI] || "").toString().trim();
+      const attendingWedding = (row[COL_WEDDING] || "").toString().trim();
 
-      const sangeethSelected = (row[COL_SANGEETH] === "Yes" || row[COL_SANGEETH] === "yes");
-      const haldiSelected = (row[COL_HALDI] === "Yes" || row[COL_HALDI] === "yes");
-      const weddingSelected = (row[COL_WEDDING] === "Yes" || row[COL_WEDDING] === "yes");
-
-      let rowUpdated = false;
+      // Only send reminders to guests attending (case-insensitive check)
+      const isAttending = (attendance === "Yes" || attendance.toLowerCase().includes("accept"));
+      if (!isAttending || !email || email.indexOf("@") === -1) continue;
 
       // 1. Check Sangeeth Reminders
-      if (sangeethSelected) {
-        // 4 Day Reminder
+      if (attendingSangeeth === "Yes") {
         if (todayStr === EVENT_DATES.Sangeeth.reminders["4D"] && !row[COL_SAN_4D]) {
           sendGuestReminderEmail(name, email, "Sangeeth Celebration", "4 days", "Friday, Oct 23rd @ 8:00 PM", "💃🏽 music, dance, laughter, and celebration");
-          sheet.getRange(i + 1, COL_SAN_4D + 1).setValue("Sent (" + todayStr + ")");
-          rowUpdated = true;
-        }
-        // 2 Day Reminder
-        if (todayStr === EVENT_DATES.Sangeeth.reminders["2D"] && !row[COL_SAN_2D]) {
+          if (sheet.getMaxColumns() >= 10) {
+            sheet.getRange(rowIndex, COL_SAN_4D + 1).setValue("Sent: " + todayStr);
+          }
+        } else if (todayStr === EVENT_DATES.Sangeeth.reminders["2D"] && !row[COL_SAN_2D]) {
           sendGuestReminderEmail(name, email, "Sangeeth Celebration", "2 days", "Friday, Oct 23rd @ 8:00 PM", "💃🏽 music, dance, laughter, and celebration");
-          sheet.getRange(i + 1, COL_SAN_2D + 1).setValue("Sent (" + todayStr + ")");
-          rowUpdated = true;
+          if (sheet.getMaxColumns() >= 11) {
+            sheet.getRange(rowIndex, COL_SAN_2D + 1).setValue("Sent: " + todayStr);
+          }
         }
       }
 
       // 2. Check Haldi Reminders
-      if (haldiSelected) {
-        // 4 Day Reminder
+      if (attendingHaldi === "Yes") {
         if (todayStr === EVENT_DATES.Haldi.reminders["4D"] && !row[COL_HAL_4D]) {
           sendGuestReminderEmail(name, email, "Haldi Ceremony", "4 days", "Saturday, Oct 24th (Afternoon)", "🌼 turmeric blessings, laughter, and bright beginnings");
-          sheet.getRange(i + 1, COL_HAL_4D + 1).setValue("Sent (" + todayStr + ")");
-          rowUpdated = true;
-        }
-        // 2 Day Reminder
-        if (todayStr === EVENT_DATES.Haldi.reminders["2D"] && !row[COL_HAL_2D]) {
+          if (sheet.getMaxColumns() >= 12) {
+            sheet.getRange(rowIndex, COL_HAL_4D + 1).setValue("Sent: " + todayStr);
+          }
+        } else if (todayStr === EVENT_DATES.Haldi.reminders["2D"] && !row[COL_HAL_2D]) {
           sendGuestReminderEmail(name, email, "Haldi Ceremony", "2 days", "Saturday, Oct 24th (Afternoon)", "🌼 turmeric blessings, laughter, and bright beginnings");
-          sheet.getRange(i + 1, COL_HAL_2D + 1).setValue("Sent (" + todayStr + ")");
-          rowUpdated = true;
+          if (sheet.getMaxColumns() >= 13) {
+            sheet.getRange(rowIndex, COL_HAL_2D + 1).setValue("Sent: " + todayStr);
+          }
         }
       }
 
       // 3. Check Wedding Reminders
-      if (weddingSelected) {
-        // 4 Day Reminder
+      if (attendingWedding === "Yes") {
         if (todayStr === EVENT_DATES.Wedding.reminders["4D"] && !row[COL_WED_4D]) {
           sendGuestReminderEmail(name, email, "Wedding Ceremony", "4 days", "Sunday, Oct 25th @ 9:45 AM", "🪷 sacred rituals, family blessings, and matching our beautiful forevers");
-          sheet.getRange(i + 1, COL_WED_4D + 1).setValue("Sent (" + todayStr + ")");
-          rowUpdated = true;
-        }
-        // 2 Day Reminder
-        if (todayStr === EVENT_DATES.Wedding.reminders["2D"] && !row[COL_WED_2D]) {
+          if (sheet.getMaxColumns() >= 14) {
+            sheet.getRange(rowIndex, COL_WED_4D + 1).setValue("Sent: " + todayStr);
+          }
+        } else if (todayStr === EVENT_DATES.Wedding.reminders["2D"] && !row[COL_WED_2D]) {
           sendGuestReminderEmail(name, email, "Wedding Ceremony", "2 days", "Sunday, Oct 25th @ 9:45 AM", "🪷 sacred rituals, family blessings, and matching our beautiful forevers");
-          sheet.getRange(i + 1, COL_WED_2D + 1).setValue("Sent (" + todayStr + ")");
-          rowUpdated = true;
+          if (sheet.getMaxColumns() >= 15) {
+            sheet.getRange(rowIndex, COL_WED_2D + 1).setValue("Sent: " + todayStr);
+          }
         }
-      }
-
-      // If spreadsheet was written to, let's flush current queue before looping to maintain tracking sync
-      if (rowUpdated) {
-        SpreadsheetApp.flush();
       }
     }
 
@@ -627,8 +801,22 @@ function checkAndSendReminders() {
  * Renders and sends an exquisite HTML email reminder to target guest
  */
 function sendGuestReminderEmail(name, email, eventName, daysLeftText, eventTime, eventDescLine) {
+  if (!email || email.indexOf("@") === -1) {
+    console.warn("sendGuestReminderEmail: invalid email for " + name + ": " + email);
+    return false;
+  }
+
   const subject = "💌 Reminder: " + name + ", we can't wait to see you at our " + eventName + "!";
-  
+  const plainText = `Dear ${name},\n\n` +
+    `With only ${daysLeftText} to go, we are counting down the days until we celebrate!\n\n` +
+    `EVENT DETAILS:\n` +
+    `- Event: ${eventName}\n` +
+    `- Date & Time: ${eventTime}\n` +
+    `- Location: Jordan Ranch (3136 Jordan Valley Rd, Dallas, TX)\n` +
+    `- Details: Join us for ${eventDescLine}.\n\n` +
+    `Please review our Wedding Website at https://cheywedsmounisha.com for full maps and schedule.\n\n` +
+    `With all our love,\nChaitanya & Mounisha`;
+
   const htmlBody = `
     <div style="font-family: Georgia, serif; max-width: 580px; margin: auto; padding: 35px 25px; border: 1px solid #dfc9a4; background-color: #fffdf9; color: #4d4037; line-height: 1.8; border-radius: 8px;">
       
@@ -686,15 +874,54 @@ function sendGuestReminderEmail(name, email, eventName, daysLeftText, eventTime,
   `;
 
   try {
-    MailApp.sendEmail({
-      to: email,
-      subject: subject,
-      htmlBody: htmlBody
-    });
-    console.log("Successfully sent " + eventName + " " + daysLeftText + " reminder on guest address: " + email);
+    const result = sendEmailRobust(email, subject, plainText, htmlBody, "cheyreddy30@gmail.com");
+    return result.success;
   } catch(err) {
     console.error("Failed sending reminder to " + email + " for event " + eventName + ": " + err.toString());
+    return false;
   }
+}
+
+/**
+ * ONE-CLICK TEST & AUTHORIZATION FUNCTION:
+ * Run this function in your Google Apps Script Editor by:
+ * 1. Selecting "testSendEmail" from the function dropdown (next to "Run" and "Debug").
+ * 2. Clicking "Run".
+ * 3. Google will show an "Authorization required" popup:
+ *    - Click "Review permissions".
+ *    - Choose your Google account (cheyreddy30@gmail.com).
+ *    - Click "Advanced" -> "Go to Untitled project (unsafe)".
+ *    - Click "Allow".
+ * 4. This immediately authorizes Gmail and Mail services, checks quota, and sends a test email to cheyreddy30@gmail.com!
+ */
+function testSendEmail() {
+  console.log("=== STARTING EMAIL SYSTEM TEST ===");
+  try {
+    const quota = MailApp.getRemainingDailyQuota();
+    console.log("Current remaining daily email quota: " + quota);
+  } catch (qErr) {
+    console.error("Quota check error (permissions might not be granted yet): " + qErr.toString());
+  }
+
+  const testPayload = {
+    name: "Chaitanya & Mounisha (Self-Test)",
+    email: "cheyreddy30@gmail.com",
+    attendance: "Yes",
+    guests: "2",
+    sangeeth: "Yes",
+    haldi: "Yes",
+    wedding: "Yes",
+    message: "This is a self-test email to verify instant confirmation delivery for your wedding website."
+  };
+
+  console.log("Sending test guest confirmation to cheyreddy30@gmail.com...");
+  const guestResult = sendGuestConfirmationEmail(testPayload, false);
+  console.log("Guest test result: " + guestResult);
+
+  console.log("Sending test host notification to notification emails...");
+  sendHostNotificationEmail(testPayload, false);
+
+  console.log("=== TEST COMPLETED. Check inbox and Spam folder for cheyreddy30@gmail.com ===");
 }
 
 /**
